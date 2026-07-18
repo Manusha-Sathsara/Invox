@@ -12,5 +12,22 @@ services:
       - postgres_data:/var/lib/postgresql/data
     restart: always
 
+  auth-service:
+    build:
+      context: ./services/authService
+      dockerfile: Dockerfile
+    container_name: invox-auth-service
+    ports:
+      - "8083:8083"
+    env_file:
+      - .env
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres-db:5432/invox_db
+      - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI=https://api.asgardeo.io/t/invox1/oauth2/token
+      - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI=https://api.asgardeo.io/t/invox1/oauth2/jwks
+    depends_on:
+      - postgres-db
+    restart: on-failure
+
 volumes:
   postgres_data:
