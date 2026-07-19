@@ -1,0 +1,46 @@
+name: "✍️ Create a Task"
+description: Create a new task.
+title: "[Task]: "
+type: task
+labels: ["Type/Task"]
+body:
+  - type: dropdown
+    id: area
+    attributes:
+      label: Please select the area the issue is related to
+      multiple: true
+      options:
+        - Gateway
+        - Platform API
+        - Developer Portal
+        - AI Workspace
+        - CLI
+        - Gateway Operator
+        - Event Gateway
+    validations:
+      required: true
+  - type: dropdown
+    id: aspect
+    attributes:
+      label: Please select the aspect the issue is related to
+      multiple: true
+      options:
+        - Aspect/API (API backends, definitions, contracts, interfaces, OpenAPI)
+        - Aspect/UI (Frontend layouts, components, styling)
+        - Aspect/Configuration (Config files, settings, env vars, defaults)
+        - Aspect/Logging (Log formats, instrumentation, improvements)
+        - Aspect/Monitoring (Metrics, observability, health checks, alerts)
+        - Aspect/Performance (Latency, optimizations, load issues)
+        - Aspect/Testing (Test coverage, integration tests)
+        - Aspect/AI (AI/LLM integration, MCP, AI readiness)
+        - Aspect/UX (User experience, flows, usability, clarity)
+        - Aspect/Other (Anything else which does not match above categories)
+    validations:
+      required: true
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: A clear description of what needs to be done.
+    validations:
+      required: true

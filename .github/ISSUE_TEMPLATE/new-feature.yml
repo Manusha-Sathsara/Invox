@@ -1,0 +1,65 @@
+name: "💡 New Feature Request"
+description: Suggest new functionality and features for the product.
+title: "[Feature]: "
+labels: ["Type/NewFeature"]
+type: feature
+body:
+  - type: dropdown
+    id: area
+    attributes:
+      label: Please select the area the issue is related to
+      multiple: true
+      options:
+        - Gateway
+        - Platform API
+        - Developer Portal
+        - AI Workspace
+        - CLI
+        - Gateway Operator
+        - Event Gateway
+    validations:
+      required: true
+  - type: dropdown
+    id: aspect
+    attributes:
+      label: Please select the aspect the issue is related to
+      multiple: true
+      options:
+        - Aspect/API (API backends, definitions, contracts, interfaces, OpenAPI)
+        - Aspect/UI (Frontend layouts, components, styling)
+        - Aspect/Configuration (Config files, settings, env vars, defaults)
+        - Aspect/Logging (Log formats, instrumentation, improvements)
+        - Aspect/Monitoring (Metrics, observability, health checks, alerts)
+        - Aspect/Performance (Latency, optimizations, load issues)
+        - Aspect/Testing (Test coverage, integration tests)
+        - Aspect/AI (AI/LLM integration, MCP, AI readiness)
+        - Aspect/UX (User experience, flows, usability, clarity)
+        - Aspect/Other (Anything else which does not match above categories)
+    validations:
+      required: true
+  - type: textarea
+    id: suggested_feature
+    attributes:
+      label: Suggested Feature
+      description: Describe the feature you'd like, the problem it solves, and any alternatives you've considered.
+    validations:
+      required: true
+  - type: input
+    id: related_issues
+    attributes:
+      label: Related Issues
+      description: Link any related issues or pull requests.
+    validations:
+      required: false
+  - type: checkboxes
+    id: steps_to_verify
+    attributes:
+      label: Steps to Verify
+      description: Check off each step as it is completed before marking this feature as done.
+      options:
+        - label: "**Design Document** — A detailed design document has been created and reviewed, covering architecture, data flow, and edge cases."
+        - label: "**Design Mail** — A design summary email has been sent to relevant stakeholders for awareness and feedback."
+        - label: "**Code Review** — All code changes have been peer-reviewed and approved according to the project's review standards."
+        - label: "**Testing Complete** — Adequate unit, integration, and/or end-to-end tests have been written and are passing."
+        - label: "**Documentation Review** — User-facing and/or developer documentation has been updated to reflect the new feature and reviewed."
+        - label: "**Feature Complete** — The feature is fully implemented, all checklist items above are done, and it is ready for release."
