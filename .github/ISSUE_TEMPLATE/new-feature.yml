@@ -9,13 +9,16 @@ body:
       label: Please select the area the issue is related to
       multiple: true
       options:
-        - Gateway
-        - Platform API
-        - Developer Portal
-        - AI Workspace
-        - CLI
-        - Gateway Operator
-        - Event Gateway
+        - API Gateway
+        - Frontend 
+        - Auth Service
+        - Tenant Service 
+        - Customer Service
+        - Product Service
+        - Invoice Service
+        - Payment Service
+        - Notification & PDF Services
+        - Database & Infrastructure (Postgres/RabbitMQ)
     validations:
       required: true
   - type: dropdown
