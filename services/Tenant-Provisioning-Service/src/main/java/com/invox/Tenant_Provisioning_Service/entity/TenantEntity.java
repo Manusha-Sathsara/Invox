@@ -20,5 +20,9 @@ public class TenantEntity {
 
     private String name;
 
-    private String asgardeoGroupId;
+    private String asgardeoSuborgId;
+
+    /** Asgardeo UUID of the user who created this workspace. */
+    private String creatorId;
 }
+

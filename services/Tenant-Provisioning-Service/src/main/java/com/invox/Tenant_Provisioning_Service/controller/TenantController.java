@@ -10,7 +10,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.invox.Tenant_Provisioning_Service.dto.CreateTenantRequest;
-import com.invox.Tenant_Provisioning_Service.entity.TenantEntity;
+import com.invox.Tenant_Provisioning_Service.dto.TenantProvisionResponse;
 import com.invox.Tenant_Provisioning_Service.service.TenantService;
 
 import tools.jackson.databind.JsonNode;
@@ -29,7 +29,7 @@ public class TenantController {
     }
 
     @PostMapping
-    public ResponseEntity<TenantEntity> createTenant(
+    public ResponseEntity<TenantProvisionResponse> createTenant(
             @RequestBody CreateTenantRequest request,
             @RequestHeader("X-JWT-Assertion") String backendJwt) throws Exception {
 
@@ -45,9 +45,9 @@ public class TenantController {
         // Extract Asgardeo User UUID
         String creatorUuid = payload.path("sub").asString();
 
-        // Pass both to the service
-        TenantEntity newTenant = tenantService.provisionNewTenant(request.tenantName(), creatorUuid);
+        // Pass both to the service and return the shaped response DTO
+        TenantProvisionResponse response = tenantService.provisionNewTenant(request.tenantName(), creatorUuid);
 
-        return ResponseEntity.ok(newTenant);
+        return ResponseEntity.ok(response);
     }
 }
