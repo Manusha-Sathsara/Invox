@@ -1,34 +1,110 @@
-import { useState } from 'react'
-import { motion } from 'motion/react'
+import { useState, useEffect } from 'react'
+import { motion, AnimatePresence } from 'motion/react'
 import { useNavigate } from 'react-router'
-import { Zap, Mail, Lock, Eye, EyeOff, User, Sun, Moon, ArrowRight, Building2 } from 'lucide-react'
+import { Zap, Mail, Lock, Eye, EyeOff, User, Sun, Moon, ArrowRight, Building2, Globe, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react'
 import { useApp } from '../context/AppContext'
+import { tenantApi } from '../services/tenantApi'
 
 export function RegisterPage() {
-  const { isDark, toggleDark, login, currentTenant } = useApp()
+  const { isDark, toggleDark, login, refreshTenants, setCurrentTenant } = useApp()
   const navigate = useNavigate()
 
-  const [name, setName] = useState('')
+  const [firstName, setFirstName] = useState('')
+  const [lastName, setLastName] = useState('')
   const [company, setCompany] = useState('')
+  const [subdomain, setSubdomain] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPass, setShowPass] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [subdomainStatus, setSubdomainStatus] = useState<'idle' | 'checking' | 'available' | 'taken'>('idle')
+  const [registrationSuccess, setRegistrationSuccess] = useState<any>(null)
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!name || !email || !password) { setError('Please fill in all required fields.'); return }
-    if (password.length < 6) { setError('Password must be at least 6 characters.'); return }
-    setError('')
-    setLoading(true)
-    setTimeout(() => {
-      login()
-      navigate(`/${currentTenant.slug}/dashboard`, { replace: true })
-    }, 900)
+  // Auto-generate suggested subdomain from company name if not manually modified
+  const handleCompanyChange = (val: string) => {
+    setCompany(val)
+    const slug = val.toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 20)
+    setSubdomain(slug)
   }
 
-  const inputClass = `w-full px-4 py-3 rounded-xl border text-sm outline-none transition-all ${
+  // Debounced subdomain availability check
+  useEffect(() => {
+    if (!subdomain || subdomain.trim().length < 2) {
+      setSubdomainStatus('idle')
+      return
+    }
+
+    setSubdomainStatus('checking')
+    const timer = setTimeout(async () => {
+      try {
+        const available = await tenantApi.checkSubdomain(subdomain)
+        setSubdomainStatus(available ? 'available' : 'taken')
+      } catch {
+        setSubdomainStatus('idle')
+      }
+    }, 450)
+
+    return () => clearTimeout(timer)
+  }, [subdomain])
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!firstName || !company || !email || !password || !subdomain) {
+      setError('Please fill in all required fields.')
+      return
+    }
+    if (subdomainStatus === 'taken') {
+      setError('This subdomain is already taken. Please choose another one.')
+      return
+    }
+    if (password.length < 6) {
+      setError('Password must be at least 6 characters.')
+      return
+    }
+
+    setError('')
+    setLoading(true)
+
+    try {
+      const response = await tenantApi.registerTenant({
+        companyName: company,
+        subdomain: subdomain.trim().toLowerCase(),
+        adminEmail: email,
+        adminFirstName: firstName,
+        adminLastName: lastName || 'Admin',
+        adminPassword: password,
+      })
+
+      setRegistrationSuccess(response)
+      await refreshTenants()
+    } catch (err: any) {
+      setError(err.message || 'Registration failed. Please check your backend connection.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleProceedToWorkspace = () => {
+    if (!registrationSuccess) return
+    const newSlug = registrationSuccess.subdomain || subdomain
+    login({
+      name: `${firstName} ${lastName}`.trim(),
+      email,
+      role: 'Admin',
+    })
+    setCurrentTenant({
+      id: registrationSuccess.id || 'new',
+      name: company,
+      plan: 'Free Tier',
+      initials: company.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2),
+      color: '#6366f1',
+      slug: newSlug,
+    })
+    navigate(`/${newSlug}/dashboard`, { replace: true })
+  }
+
+  const inputClass = `w-full px-4 py-2.5 rounded-xl border text-sm outline-none transition-all ${
     isDark
       ? 'bg-white/[0.06] border-white/[0.10] text-slate-200 placeholder:text-slate-600 focus:border-indigo-500/60 focus:bg-white/[0.09]'
       : 'bg-black/[0.04] border-black/[0.08] text-slate-800 placeholder:text-slate-400 focus:border-indigo-400 focus:bg-white/90'
@@ -39,7 +115,7 @@ export function RegisterPage() {
     : 'bg-white/70 backdrop-blur-2xl border border-white/80 shadow-2xl shadow-black/10'
 
   return (
-    <div className="relative flex items-center justify-center min-h-screen py-8 z-10">
+    <div className="relative flex items-center justify-center min-h-screen py-10 z-10">
       <button
         onClick={toggleDark}
         className={`fixed top-6 right-6 p-2.5 rounded-xl border transition-all z-20 ${
@@ -55,9 +131,9 @@ export function RegisterPage() {
         initial={{ opacity: 0, y: 24 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4, ease: 'easeOut' }}
-        className={`w-full max-w-md mx-4 rounded-3xl p-8 ${glass}`}
+        className={`w-full max-w-lg mx-4 rounded-3xl p-8 ${glass}`}
       >
-        <div className="flex items-center gap-3 mb-8">
+        <div className="flex items-center gap-3 mb-6">
           <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center shadow-lg shadow-indigo-500/30">
             <Zap size={20} className="text-white" />
           </div>
@@ -66,97 +142,185 @@ export function RegisterPage() {
           </span>
         </div>
 
-        <h1 className={`text-2xl mb-1 ${isDark ? 'text-white' : 'text-slate-900'}`} style={{ fontWeight: 700, letterSpacing: '-0.03em' }}>
-          Create your account
-        </h1>
-        <p className={`text-sm mb-8 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-          Start managing invoices in minutes
-        </p>
-
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className={`text-xs mb-1.5 block ${isDark ? 'text-slate-400' : 'text-slate-600'}`} style={{ fontWeight: 600 }}>
-                Full Name <span className="text-red-400">*</span>
-              </label>
-              <div className="relative">
-                <User size={15} className={`absolute left-3.5 top-1/2 -translate-y-1/2 ${isDark ? 'text-slate-500' : 'text-slate-400'}`} />
-                <input type="text" placeholder="Alex Morgan" value={name} onChange={e => setName(e.target.value)} className={`${inputClass} pl-10`} />
+        <AnimatePresence mode="wait">
+          {registrationSuccess ? (
+            <motion.div
+              key="success"
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="text-center py-4 space-y-4"
+            >
+              <div className="w-16 h-16 rounded-3xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center mx-auto text-emerald-400 shadow-xl shadow-emerald-500/10">
+                <CheckCircle2 size={32} />
               </div>
-            </div>
-            <div>
-              <label className={`text-xs mb-1.5 block ${isDark ? 'text-slate-400' : 'text-slate-600'}`} style={{ fontWeight: 600 }}>Company</label>
-              <div className="relative">
-                <Building2 size={15} className={`absolute left-3.5 top-1/2 -translate-y-1/2 ${isDark ? 'text-slate-500' : 'text-slate-400'}`} />
-                <input type="text" placeholder="Acme Corp" value={company} onChange={e => setCompany(e.target.value)} className={`${inputClass} pl-10`} />
+              <h2 className={`text-2xl ${isDark ? 'text-white' : 'text-slate-900'}`} style={{ fontWeight: 700 }}>
+                Organization Provisioned!
+              </h2>
+              <p className={`text-sm ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
+                Your B2B workspace <strong>{registrationSuccess.companyName}</strong> has been created with Asgardeo IDP authentication.
+              </p>
+
+              <div className={`p-4 rounded-2xl border text-left text-xs space-y-1.5 ${isDark ? 'bg-white/[0.03] border-white/[0.06] text-slate-300' : 'bg-black/[0.02] border-black/[0.05] text-slate-700'}`}>
+                <div className="flex justify-between">
+                  <span className="text-slate-500">Subdomain:</span>
+                  <span className="font-mono font-bold text-indigo-400">{registrationSuccess.subdomain}.invox.local</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-500">Asgardeo Org ID:</span>
+                  <span className="font-mono text-slate-400 truncate max-w-[200px]">{registrationSuccess.asgardeoOrgId}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-500">Admin Account:</span>
+                  <span className="font-semibold">{registrationSuccess.adminEmail}</span>
+                </div>
               </div>
-            </div>
-          </div>
 
-          <div>
-            <label className={`text-xs mb-1.5 block ${isDark ? 'text-slate-400' : 'text-slate-600'}`} style={{ fontWeight: 600 }}>
-              Email <span className="text-red-400">*</span>
-            </label>
-            <div className="relative">
-              <Mail size={15} className={`absolute left-3.5 top-1/2 -translate-y-1/2 ${isDark ? 'text-slate-500' : 'text-slate-400'}`} />
-              <input type="email" placeholder="you@company.com" value={email} onChange={e => setEmail(e.target.value)} className={`${inputClass} pl-10`} />
-            </div>
-          </div>
+              <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={handleProceedToWorkspace}
+                className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl text-sm text-white shadow-lg shadow-indigo-500/30"
+                style={{ background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)', fontWeight: 700 }}
+              >
+                Enter Organization Workspace <ArrowRight size={16} />
+              </motion.button>
+            </motion.div>
+          ) : (
+            <motion.div key="form" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+              <h1 className={`text-2xl mb-1 ${isDark ? 'text-white' : 'text-slate-900'}`} style={{ fontWeight: 700, letterSpacing: '-0.03em' }}>
+                Create your workspace
+              </h1>
+              <p className={`text-sm mb-6 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                Provision a multi-tenant invoicing organization in seconds
+              </p>
 
-          <div>
-            <label className={`text-xs mb-1.5 block ${isDark ? 'text-slate-400' : 'text-slate-600'}`} style={{ fontWeight: 600 }}>
-              Password <span className="text-red-400">*</span>
-            </label>
-            <div className="relative">
-              <Lock size={15} className={`absolute left-3.5 top-1/2 -translate-y-1/2 ${isDark ? 'text-slate-500' : 'text-slate-400'}`} />
-              <input type={showPass ? 'text' : 'password'} placeholder="Min. 6 characters" value={password} onChange={e => setPassword(e.target.value)} className={`${inputClass} pl-10 pr-10`} />
-              <button type="button" onClick={() => setShowPass(!showPass)} className={`absolute right-3 top-1/2 -translate-y-1/2 p-0.5 transition-colors ${isDark ? 'text-slate-500 hover:text-slate-300' : 'text-slate-400 hover:text-slate-600'}`}>
-                {showPass ? <EyeOff size={15} /> : <Eye size={15} />}
-              </button>
-            </div>
-            {password && (
-              <div className="mt-1.5 flex gap-1">
-                {[1, 2, 3, 4].map(i => (
-                  <div key={i} className={`h-1 flex-1 rounded-full transition-colors ${
-                    password.length >= i * 3
-                      ? i <= 1 ? 'bg-red-400' : i <= 2 ? 'bg-amber-400' : i <= 3 ? 'bg-yellow-400' : 'bg-emerald-400'
-                      : isDark ? 'bg-white/10' : 'bg-black/10'
-                  }`} />
-                ))}
+              <form onSubmit={handleSubmit} className="space-y-3.5">
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className={`text-xs mb-1 block ${isDark ? 'text-slate-400' : 'text-slate-600'}`} style={{ fontWeight: 600 }}>
+                      First Name <span className="text-red-400">*</span>
+                    </label>
+                    <div className="relative">
+                      <User size={14} className={`absolute left-3 top-1/2 -translate-y-1/2 ${isDark ? 'text-slate-500' : 'text-slate-400'}`} />
+                      <input type="text" placeholder="Alex" value={firstName} onChange={e => setFirstName(e.target.value)} className={`${inputClass} pl-9`} required />
+                    </div>
+                  </div>
+                  <div>
+                    <label className={`text-xs mb-1 block ${isDark ? 'text-slate-400' : 'text-slate-600'}`} style={{ fontWeight: 600 }}>
+                      Last Name
+                    </label>
+                    <div className="relative">
+                      <User size={14} className={`absolute left-3 top-1/2 -translate-y-1/2 ${isDark ? 'text-slate-500' : 'text-slate-400'}`} />
+                      <input type="text" placeholder="Morgan" value={lastName} onChange={e => setLastName(e.target.value)} className={`${inputClass} pl-9`} />
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <label className={`text-xs mb-1 block ${isDark ? 'text-slate-400' : 'text-slate-600'}`} style={{ fontWeight: 600 }}>
+                    Company / Organization <span className="text-red-400">*</span>
+                  </label>
+                  <div className="relative">
+                    <Building2 size={14} className={`absolute left-3 top-1/2 -translate-y-1/2 ${isDark ? 'text-slate-500' : 'text-slate-400'}`} />
+                    <input type="text" placeholder="Acme Global Inc." value={company} onChange={e => handleCompanyChange(e.target.value)} className={`${inputClass} pl-9`} required />
+                  </div>
+                </div>
+
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className={`text-xs ${isDark ? 'text-slate-400' : 'text-slate-600'}`} style={{ fontWeight: 600 }}>
+                      Organization Subdomain <span className="text-red-400">*</span>
+                    </label>
+                    {subdomainStatus === 'checking' && (
+                      <span className="flex items-center gap-1 text-[11px] text-slate-400">
+                        <Loader2 size={11} className="animate-spin" /> Checking...
+                      </span>
+                    )}
+                    {subdomainStatus === 'available' && (
+                      <span className="flex items-center gap-1 text-[11px] text-emerald-400 font-semibold">
+                        <CheckCircle2 size={11} /> Available
+                      </span>
+                    )}
+                    {subdomainStatus === 'taken' && (
+                      <span className="flex items-center gap-1 text-[11px] text-red-400 font-semibold">
+                        <AlertCircle size={11} /> Already taken
+                      </span>
+                    )}
+                  </div>
+                  <div className="relative flex items-center">
+                    <Globe size={14} className={`absolute left-3 top-1/2 -translate-y-1/2 ${isDark ? 'text-slate-500' : 'text-slate-400'}`} />
+                    <input
+                      type="text"
+                      placeholder="acmeglobal"
+                      value={subdomain}
+                      onChange={e => setSubdomain(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))}
+                      className={`${inputClass} pl-9 pr-28 font-mono text-xs`}
+                      required
+                    />
+                    <span className={`absolute right-3 text-xs font-mono select-none ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
+                      .invox.local
+                    </span>
+                  </div>
+                </div>
+
+                <div>
+                  <label className={`text-xs mb-1 block ${isDark ? 'text-slate-400' : 'text-slate-600'}`} style={{ fontWeight: 600 }}>
+                    Work Email <span className="text-red-400">*</span>
+                  </label>
+                  <div className="relative">
+                    <Mail size={14} className={`absolute left-3 top-1/2 -translate-y-1/2 ${isDark ? 'text-slate-500' : 'text-slate-400'}`} />
+                    <input type="email" placeholder="alex@acmeglobal.com" value={email} onChange={e => setEmail(e.target.value)} className={`${inputClass} pl-9`} required />
+                  </div>
+                </div>
+
+                <div>
+                  <label className={`text-xs mb-1 block ${isDark ? 'text-slate-400' : 'text-slate-600'}`} style={{ fontWeight: 600 }}>
+                    Password <span className="text-red-400">*</span>
+                  </label>
+                  <div className="relative">
+                    <Lock size={14} className={`absolute left-3 top-1/2 -translate-y-1/2 ${isDark ? 'text-slate-500' : 'text-slate-400'}`} />
+                    <input type={showPass ? 'text' : 'password'} placeholder="Min. 6 characters" value={password} onChange={e => setPassword(e.target.value)} className={`${inputClass} pl-9 pr-10`} required />
+                    <button type="button" onClick={() => setShowPass(!showPass)} className={`absolute right-3 top-1/2 -translate-y-1/2 p-0.5 transition-colors ${isDark ? 'text-slate-500 hover:text-slate-300' : 'text-slate-400 hover:text-slate-600'}`}>
+                      {showPass ? <EyeOff size={14} /> : <Eye size={14} />}
+                    </button>
+                  </div>
+                </div>
+
+                {error && (
+                  <div className="flex items-center gap-2 text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded-xl px-3.5 py-2.5">
+                    <AlertCircle size={14} className="flex-shrink-0" />
+                    <span>{error}</span>
+                  </div>
+                )}
+
+                <motion.button
+                  type="submit"
+                  whileHover={{ scale: 1.01 }}
+                  whileTap={{ scale: 0.98 }}
+                  disabled={loading || subdomainStatus === 'taken'}
+                  className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm text-white shadow-lg shadow-indigo-500/30 transition-all disabled:opacity-70 mt-2"
+                  style={{ background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)', fontWeight: 700 }}
+                >
+                  {loading ? (
+                    <span className="flex items-center gap-2">
+                      <Loader2 size={16} className="animate-spin" /> Provisioning Asgardeo Sub-Org...
+                    </span>
+                  ) : (
+                    <>Create Organization Workspace <ArrowRight size={15} /></>
+                  )}
+                </motion.button>
+              </form>
+
+              <div className={`mt-5 pt-5 border-t text-center text-sm ${isDark ? 'border-white/[0.06] text-slate-500' : 'border-black/[0.06] text-slate-400'}`}>
+                Already have a workspace?{' '}
+                <button onClick={() => navigate('/login')} className="text-indigo-500 hover:text-indigo-400 transition-colors" style={{ fontWeight: 600 }}>
+                  Sign in
+                </button>
               </div>
-            )}
-          </div>
-
-          {error && <p className="text-xs text-red-500 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2">{error}</p>}
-
-          <motion.button
-            type="submit"
-            whileHover={{ scale: 1.01 }}
-            whileTap={{ scale: 0.98 }}
-            disabled={loading}
-            className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm text-white shadow-lg shadow-indigo-500/30 transition-all disabled:opacity-70"
-            style={{ background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)', fontWeight: 700 }}
-          >
-            {loading ? (
-              <motion.div animate={{ rotate: 360 }} transition={{ duration: 0.8, repeat: Infinity, ease: 'linear' }} className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white" />
-            ) : (
-              <>Create account <ArrowRight size={15} /></>
-            )}
-          </motion.button>
-        </form>
-
-        <p className={`mt-4 text-center text-xs ${isDark ? 'text-slate-600' : 'text-slate-400'}`}>
-          By creating an account you agree to our{' '}
-          <span className="text-indigo-500 cursor-pointer hover:text-indigo-400">Terms</span> and{' '}
-          <span className="text-indigo-500 cursor-pointer hover:text-indigo-400">Privacy Policy</span>.
-        </p>
-
-        <div className={`mt-6 pt-6 border-t text-center text-sm ${isDark ? 'border-white/[0.06] text-slate-500' : 'border-black/[0.06] text-slate-400'}`}>
-          Already have an account?{' '}
-          <button onClick={() => navigate('/login')} className="text-indigo-500 hover:text-indigo-400 transition-colors" style={{ fontWeight: 600 }}>
-            Sign in
-          </button>
-        </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </motion.div>
     </div>
   )

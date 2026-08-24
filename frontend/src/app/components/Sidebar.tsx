@@ -293,7 +293,7 @@ export function Sidebar({ currentView, collapsed, onCollapsedChange, mobileOpen 
               style={{ position: 'fixed', top: tenantRect.bottom + 6, left: tenantRect.left, width: tenantRect.width, zIndex: 99999 }}
               className={`rounded-xl overflow-hidden ${dropdownBase}`}
             >
-              {TENANTS.map((tenant) => (
+              {tenants.map((tenant) => (
                 <button
                   key={tenant.id}
                   onClick={() => handleTenantSwitch(tenant)}
@@ -310,9 +310,12 @@ export function Sidebar({ currentView, collapsed, onCollapsedChange, mobileOpen 
                 </button>
               ))}
               <div className={`border-t mx-1 my-1 ${isDark ? 'border-white/[0.06]' : 'border-black/[0.05]'}`} />
-              <button className={`w-full flex items-center gap-2 px-3 py-2 text-sm transition-colors ${isDark ? 'hover:bg-white/[0.06] text-indigo-400' : 'hover:bg-indigo-50 text-indigo-600'}`}>
+              <button
+                onClick={() => { setTenantDropOpen(false); navigate('/register'); }}
+                className={`w-full flex items-center gap-2 px-3 py-2 text-sm transition-colors ${isDark ? 'hover:bg-white/[0.06] text-indigo-400' : 'hover:bg-indigo-50 text-indigo-600'}`}
+              >
                 <Layers size={14} />
-                Manage Workspaces
+                + Create New Workspace
               </button>
             </motion.div>
           )}

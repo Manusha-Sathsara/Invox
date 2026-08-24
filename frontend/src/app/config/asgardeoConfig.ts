@@ -1,0 +1,9 @@
+export const asgardeoConfig = {
+  signInRedirectURL: window.location.origin,
+  signOutRedirectURL: window.location.origin,
+  clientID: "pyfb1DKeI8kklfLqIyEfXZc5Urka",
+  baseUrl: "https://api.asgardeo.io/t/pixelaura",
+  scope: ["openid", "profile", "email", "roles", "groups"]
+};
+
+export const API_BASE_URL = "http://localhost:8081/api/v1";
