@@ -1,5 +1,6 @@
 # Local environment configs
 .env
+*.env.local
 
 # Logs
 logs
@@ -10,8 +11,26 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-
+# Node / Frontend
 node_modules
 dist
 dist-ssr
 *.local
+
+# Java & Maven
+target/
+*.class
+*.jar
+*.war
+*.ear
+.mvn/timing.properties
+.mvn/wrapper/maven-wrapper.jar
+
+# IDE & Editor files
+.idea/
+*.iml
+.classpath
+.project
+.settings/
+.DS_Store
+
