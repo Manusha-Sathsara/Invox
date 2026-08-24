@@ -9,14 +9,16 @@
 
 ---
 
-## Milestone 2: Frontend UI & Authentication Integration (In Progress 🚀 - Issue #10)
-- **Figma Export Integration:** Assemble React SPA components, responsive navigation, and Tailwind CSS design tokens.
-- **Asgardeo React SDK (`@asgardeo/react`):** Configure OIDC PKCE flow with dynamic sub-organization routing and role-based views (`Invox_admin`, `Invox_accountant`, `Invox_viewer`).
-- **Tenant Service Connectivity:** Integrate Self-Service Registration, Subdomain Validation, and User Invitation forms.
+## Milestone 2: Frontend UI & Authentication Integration (Completed ✅ - Issues #2, #10)
+- **Figma Export Integration:** Imported React SPA components, responsive navigation, and Tailwind CSS design tokens (`feat/10-frontend-ui-asgardeo-integration`).
+- **Asgardeo Configuration:** Configured root organization `pixelaura`, SPA Client ID `pyfb1DKeI8kklfLqIyEfXZc5Urka`, and presentation scopes (`openid`, `profile`, `email`, `roles`, `groups`).
+- **Live Tenant Registration & Subdomain Validation:** Integrated with Spring Boot `tenant-service` endpoints (`POST /api/v1/tenants/register` and `GET /api/v1/tenants/check-subdomain/{subdomain}`).
+- **Dynamic Organization Workspace Switcher:** Dynamically loads active registered tenants from `GET /api/v1/tenants/public-list`.
+- **Team Invitations & User Management:** Connected team invite modal to backend SCIM2 provisioning (`POST /api/v1/tenants/users/invite`).
 
 ---
 
-## Milestone 3: Business Microservices & Multi-Tenant Data Layer (Planned 📋)
+## Milestone 3: Business Microservices & Multi-Tenant Data Layer (Next Focus 🚀)
 - **Customer Service (#19):** Multi-tenant client management with Hibernate 6 `@TenantId` column discriminator.
-- **Product Service (#20):** Multi-tenant product catalog and pricing directory.
-- **Invoice Service (#21):** Multi-tenant invoice generation, line item calculations, state machines, and PDF export.
+- **Product Service (#20):** Multi-tenant product catalog and pricing directory with `@TenantId`.
+- **Invoice Service (#21):** Multi-tenant invoice generation, line item calculations, status state machines, and PDF export with `@TenantId`.
