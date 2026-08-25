@@ -79,4 +79,44 @@ public class TenantController {
         List<TenantUserDto> users = tenantService.getTenantUsers();
         return ResponseEntity.ok(users);
     }
+
+    /**
+     * Protected endpoint: Update an organization user (role, name, status)
+     */
+    @PutMapping("/users/{userId}")
+    public ResponseEntity<TenantUserDto> updateUser(
+            @PathVariable java.util.UUID userId,
+            @RequestBody UserUpdateRequest request) {
+        TenantUserDto updated = tenantService.updateUser(userId, request);
+        return ResponseEntity.ok(updated);
+    }
+
+    /**
+     * Protected endpoint: Toggle user active / suspended status
+     */
+    @PatchMapping("/users/{userId}/status")
+    public ResponseEntity<TenantUserDto> toggleUserStatus(
+            @PathVariable java.util.UUID userId,
+            @RequestParam boolean active) {
+        TenantUserDto updated = tenantService.toggleUserStatus(userId, active);
+        return ResponseEntity.ok(updated);
+    }
+
+    /**
+     * Protected endpoint: Remove a user from the organization
+     */
+    @DeleteMapping("/users/{userId}")
+    public ResponseEntity<Void> removeUser(@PathVariable java.util.UUID userId) {
+        tenantService.removeUser(userId);
+        return ResponseEntity.noContent().build();
+    }
+
+    /**
+     * Public helper endpoint: Look up tenant details by subdomain
+     */
+    @GetMapping("/by-subdomain/{subdomain}")
+    public ResponseEntity<TenantResponse> getTenantBySubdomain(@PathVariable String subdomain) {
+        TenantResponse response = tenantService.getTenantBySubdomain(subdomain);
+        return ResponseEntity.ok(response);
+    }
 }

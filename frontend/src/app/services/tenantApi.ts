@@ -29,6 +29,13 @@ export interface UserInvitePayload {
   role: 'ADMINISTRATOR' | 'ACCOUNTANT' | 'VIEWER';
 }
 
+export interface UserUpdatePayload {
+  firstName?: string;
+  lastName?: string;
+  role?: 'ADMINISTRATOR' | 'ACCOUNTANT' | 'VIEWER';
+  active?: boolean;
+}
+
 export interface TenantUserResponse {
   id: string;
   email: string;
@@ -68,12 +75,22 @@ export const tenantApi = {
         const errorData = await res.json();
         errorMsg = errorData.message || errorMsg;
       } catch {
-        // use default error message
+        // fallback
       }
       throw new Error(errorMsg);
     }
 
     return res.json();
+  },
+
+  async getTenantBySubdomain(subdomain: string): Promise<TenantResponse | null> {
+    try {
+      const res = await fetch(`${API_BASE_URL}/tenants/by-subdomain/${encodeURIComponent(subdomain.trim().toLowerCase())}`);
+      if (!res.ok) return null;
+      return res.json();
+    } catch {
+      return null;
+    }
   },
 
   async getPublicTenants(): Promise<TenantResponse[]> {
@@ -104,7 +121,7 @@ export const tenantApi = {
         const errorData = await res.json();
         errorMsg = errorData.message || errorMsg;
       } catch {
-        // use default error message
+        // fallback
       }
       throw new Error(errorMsg);
     }
@@ -124,6 +141,57 @@ export const tenantApi = {
       return res.json();
     } catch {
       return [];
+    }
+  },
+
+  async updateUser(userId: string, payload: UserUpdatePayload, token?: string): Promise<TenantUserResponse> {
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+
+    const res = await fetch(`${API_BASE_URL}/tenants/users/${userId}`, {
+      method: 'PUT',
+      headers,
+      body: JSON.stringify(payload),
+    });
+
+    if (!res.ok) {
+      throw new Error('Failed to update user');
+    }
+    return res.json();
+  },
+
+  async toggleUserStatus(userId: string, active: boolean, token?: string): Promise<TenantUserResponse> {
+    const headers: Record<string, string> = {};
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+
+    const res = await fetch(`${API_BASE_URL}/tenants/users/${userId}/status?active=${active}`, {
+      method: 'PATCH',
+      headers,
+    });
+
+    if (!res.ok) {
+      throw new Error('Failed to change user status');
+    }
+    return res.json();
+  },
+
+  async removeUser(userId: string, token?: string): Promise<void> {
+    const headers: Record<string, string> = {};
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+
+    const res = await fetch(`${API_BASE_URL}/tenants/users/${userId}`, {
+      method: 'DELETE',
+      headers,
+    });
+
+    if (!res.ok) {
+      throw new Error('Failed to remove user');
     }
   }
 };

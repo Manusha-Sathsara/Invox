@@ -32,6 +32,7 @@ public class SecurityConfig {
                     "/api/v1/tenants/public-list",
                     "/api/v1/tenants/*",
                     "/api/v1/tenants/check-subdomain/**",
+                    "/api/v1/tenants/by-subdomain/**",
                     "/actuator/health",
                     "/actuator/info"
                 ).permitAll()

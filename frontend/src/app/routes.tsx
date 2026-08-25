@@ -3,6 +3,7 @@ import { AppProvider, useApp } from './context/AppContext'
 import { LandingPage } from './components/LandingPage'
 import { LoginPage } from './components/LoginPage'
 import { RegisterPage } from './components/RegisterPage'
+import { AuthCallback } from './components/AuthCallback'
 import { AppLayout } from './layouts/AppLayout'
 import { Dashboard } from './components/Dashboard'
 import { InvoiceList } from './components/InvoiceList'
@@ -56,6 +57,7 @@ export const router = createBrowserRouter([
       { index: true, Component: LandingPage },
       { path: 'login', Component: LoginPage },
       { path: 'register', Component: RegisterPage },
+      { path: 'auth/callback', Component: AuthCallback },
       {
         path: ':tenant',
         Component: AppLayout,

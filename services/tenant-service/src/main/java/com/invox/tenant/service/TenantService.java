@@ -194,6 +194,82 @@ public class TenantService {
     }
 
     /**
+     * Updates user role and profile details in the current tenant
+     */
+    @Transactional
+    public TenantUserDto updateUser(java.util.UUID userId, UserUpdateRequest request) {
+        Tenant tenant = resolveCurrentTenant();
+        TenantUser user = tenantUserRepository.findByIdAndTenant(userId, tenant)
+                .orElseThrow(() -> new IllegalArgumentException("User not found in this organization: " + userId));
+
+        if (request.getFirstName() != null) {
+            user.setFirstName(request.getFirstName());
+        }
+        if (request.getLastName() != null) {
+            user.setLastName(request.getLastName());
+        }
+        if (request.getRole() != null) {
+            user.setRole(request.getRole());
+        }
+        if (request.getActive() != null) {
+            user.setActive(request.getActive());
+        }
+
+        user = tenantUserRepository.save(user);
+        log.info("Updated user '{}' in tenant '{}'", user.getEmail(), tenant.getCompanyName());
+        return toUserDto(user);
+    }
+
+    /**
+     * Toggles active / suspended status of an organization user
+     */
+    @Transactional
+    public TenantUserDto toggleUserStatus(java.util.UUID userId, boolean active) {
+        Tenant tenant = resolveCurrentTenant();
+        TenantUser user = tenantUserRepository.findByIdAndTenant(userId, tenant)
+                .orElseThrow(() -> new IllegalArgumentException("User not found in this organization: " + userId));
+
+        user.setActive(active);
+        user = tenantUserRepository.save(user);
+        log.info("Toggled user '{}' active status to {} in tenant '{}'", user.getEmail(), active, tenant.getCompanyName());
+        return toUserDto(user);
+    }
+
+    /**
+     * Removes an employee from the current tenant organization
+     */
+    @Transactional
+    public void removeUser(java.util.UUID userId) {
+        Tenant tenant = resolveCurrentTenant();
+        TenantUser user = tenantUserRepository.findByIdAndTenant(userId, tenant)
+                .orElseThrow(() -> new IllegalArgumentException("User not found in this organization: " + userId));
+
+        tenantUserRepository.delete(user);
+        log.info("Removed user '{}' from tenant '{}'", user.getEmail(), tenant.getCompanyName());
+    }
+
+    /**
+     * Public helper to resolve tenant by subdomain or orgId
+     */
+    @Transactional(readOnly = true)
+    public TenantResponse getTenantBySubdomain(String subdomain) {
+        Tenant tenant = tenantRepository.findBySubdomainIgnoreCase(subdomain.trim())
+                .orElseThrow(() -> new IllegalArgumentException("Tenant organization not found for subdomain: " + subdomain));
+
+        return TenantResponse.builder()
+                .id(tenant.getId())
+                .companyName(tenant.getCompanyName())
+                .subdomain(tenant.getSubdomain())
+                .asgardeoOrgId(tenant.getAsgardeoOrgId())
+                .asgardeoOrgHandle(tenant.getAsgardeoOrgHandle())
+                .status(tenant.getStatus())
+                .plan(tenant.getPlan())
+                .adminEmail(tenant.getAdminEmail())
+                .createdAt(tenant.getCreatedAt())
+                .build();
+    }
+
+    /**
      * Deletes a tenant from Asgardeo and Database
      */
     @Transactional

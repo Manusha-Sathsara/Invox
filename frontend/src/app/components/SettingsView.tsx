@@ -92,6 +92,35 @@ export function SettingsView() {
   const [inviteSuccess, setInviteSuccess] = useState('')
   const [teamMembers, setTeamMembers] = useState(TEAM)
 
+  const handleRoleChange = async (memberId: string, newRole: 'Admin' | 'Accountant' | 'Viewer') => {
+    const roleEnum = newRole === 'Admin' ? 'ADMINISTRATOR' : newRole === 'Accountant' ? 'ACCOUNTANT' : 'VIEWER'
+    try {
+      await tenantApi.updateUser(memberId, { role: roleEnum as any })
+    } catch {
+      // preview state update
+    }
+    setTeamMembers(prev => prev.map(m => m.id === memberId ? { ...m, role: newRole } : m))
+  }
+
+  const handleToggleStatus = async (memberId: string, currentActive: boolean) => {
+    try {
+      await tenantApi.toggleUserStatus(memberId, !currentActive)
+    } catch {
+      // preview state update
+    }
+    setTeamMembers(prev => prev.map(m => m.id === memberId ? { ...m, active: !currentActive } : m))
+  }
+
+  const handleRemoveMember = async (memberId: string) => {
+    if (!confirm('Are you sure you want to remove this user from your organization?')) return
+    try {
+      await tenantApi.removeUser(memberId)
+    } catch {
+      // preview state update
+    }
+    setTeamMembers(prev => prev.filter(m => m.id !== memberId))
+  }
+
   const handleSendInvite = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!inviteEmail) return
@@ -113,7 +142,8 @@ export function SettingsView() {
           email: inviteEmail,
           role: inviteRole === 'ADMINISTRATOR' ? 'Admin' : inviteRole === 'ACCOUNTANT' ? 'Accountant' : 'Viewer',
           initials: inviteEmail.slice(0, 2).toUpperCase(),
-          color: '#0ea5e9'
+          color: '#0ea5e9',
+          active: true
         }
       ])
       setTimeout(() => {
@@ -131,7 +161,8 @@ export function SettingsView() {
           email: inviteEmail,
           role: inviteRole === 'ADMINISTRATOR' ? 'Admin' : inviteRole === 'ACCOUNTANT' ? 'Accountant' : 'Viewer',
           initials: inviteEmail.slice(0, 2).toUpperCase(),
-          color: '#0ea5e9'
+          color: '#0ea5e9',
+          active: true
         }
       ])
       setInviteSuccess(`Invitation dispatched for ${inviteEmail}!`)
@@ -349,40 +380,98 @@ export function SettingsView() {
               </div>
 
               <div className="space-y-2">
-                {teamMembers.map((member, i) => (
-                  <motion.div
-                    key={member.id}
-                    initial={{ opacity: 0, x: -8 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: i * 0.06 }}
-                    className={`flex items-center gap-3 p-3 rounded-xl border transition-colors ${
-                      isDark
-                        ? 'border-white/[0.05] hover:bg-white/[0.03]'
-                        : 'border-black/[0.05] hover:bg-black/[0.02]'
-                    }`}
-                  >
-                    <div
-                      className="w-9 h-9 rounded-full flex items-center justify-center text-white text-xs flex-shrink-0 shadow"
-                      style={{ background: member.color, fontWeight: 800 }}
+                {teamMembers.map((member, i) => {
+                  const isSelf = member.id === currentUser.id
+                  return (
+                    <motion.div
+                      key={member.id}
+                      initial={{ opacity: 0, x: -8 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: i * 0.06 }}
+                      className={`flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 rounded-xl border transition-colors ${
+                        member.active === false ? 'opacity-50 ' : ''
+                      }${
+                        isDark
+                          ? 'border-white/[0.05] hover:bg-white/[0.03]'
+                          : 'border-black/[0.05] hover:bg-black/[0.02]'
+                      }`}
                     >
-                      {member.initials}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className={`text-sm ${isDark ? 'text-slate-200' : 'text-slate-800'}`} style={{ fontWeight: 600 }}>
-                        {member.name}
-                        {member.id === currentUser.id && (
-                          <span className={`ml-2 text-[10px] px-1.5 py-0.5 rounded-full ${isDark ? 'bg-indigo-900/50 text-indigo-400' : 'bg-indigo-50 text-indigo-600'}`}>
-                            You
+                      <div className="flex items-center gap-3">
+                        <div
+                          className="w-9 h-9 rounded-full flex items-center justify-center text-white text-xs flex-shrink-0 shadow"
+                          style={{ background: member.color, fontWeight: 800 }}
+                        >
+                          {member.initials}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <p className={`text-sm ${isDark ? 'text-slate-200' : 'text-slate-800'}`} style={{ fontWeight: 600 }}>
+                              {member.name}
+                            </p>
+                            {isSelf && (
+                              <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${isDark ? 'bg-indigo-900/50 text-indigo-400' : 'bg-indigo-50 text-indigo-600'}`}>
+                                You
+                              </span>
+                            )}
+                            {member.active === false && (
+                              <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-red-500/10 text-red-400 border border-red-500/20 font-semibold">
+                                Suspended
+                              </span>
+                            )}
+                          </div>
+                          <p className={`text-xs ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>{member.email}</p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2 self-end sm:self-auto">
+                        {canEdit && !isSelf ? (
+                          <>
+                            {/* Role Selector */}
+                            <select
+                              value={member.role}
+                              onChange={(e) => handleRoleChange(member.id, e.target.value as any)}
+                              className={`text-xs px-2.5 py-1 rounded-lg border outline-none cursor-pointer ${
+                                isDark
+                                  ? 'bg-slate-900 border-white/[0.1] text-slate-200'
+                                  : 'bg-white border-black/[0.1] text-slate-700'
+                              }`}
+                            >
+                              <option value="Admin">Admin</option>
+                              <option value="Accountant">Accountant</option>
+                              <option value="Viewer">Viewer</option>
+                            </select>
+
+                            {/* Suspend / Activate Toggle */}
+                            <button
+                              onClick={() => handleToggleStatus(member.id, member.active !== false)}
+                              className={`text-xs px-2.5 py-1 rounded-lg border transition-colors ${
+                                member.active === false
+                                  ? 'border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10'
+                                  : isDark
+                                    ? 'border-white/[0.08] text-slate-400 hover:bg-white/[0.05]'
+                                    : 'border-black/[0.08] text-slate-500 hover:bg-black/[0.03]'
+                              }`}
+                            >
+                              {member.active === false ? 'Activate' : 'Suspend'}
+                            </button>
+
+                            {/* Remove Member */}
+                            <button
+                              onClick={() => handleRemoveMember(member.id)}
+                              className="text-xs px-2.5 py-1 rounded-lg border border-red-500/20 text-red-400 hover:bg-red-500/10 transition-colors"
+                            >
+                              Remove
+                            </button>
+                          </>
+                        ) : (
+                          <span className={`text-[11px] px-2.5 py-1 rounded-full border ${ROLE_COLORS[member.role] || ROLE_COLORS.Viewer}`} style={{ fontWeight: 600 }}>
+                            {member.role}
                           </span>
                         )}
-                      </p>
-                      <p className={`text-xs ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>{member.email}</p>
-                    </div>
-                    <span className={`text-[11px] px-2.5 py-1 rounded-full border ${ROLE_COLORS[member.role] || ROLE_COLORS.Viewer}`} style={{ fontWeight: 600 }}>
-                      {member.role}
-                    </span>
-                  </motion.div>
-                ))}
+                      </div>
+                    </motion.div>
+                  )
+                })}
               </div>
 
               <div className={`mt-4 pt-4 border-t text-xs ${isDark ? 'border-white/[0.05] text-slate-500' : 'border-black/[0.05] text-slate-400'}`}>
