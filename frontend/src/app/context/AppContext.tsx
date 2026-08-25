@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react'
+import { useAsgardeo } from '@asgardeo/react'
 import { TENANTS, APP_USERS } from '../App'
 import type { Tenant, AppUser, UserRole } from '../App'
 import { tenantApi, type TenantResponse } from '../services/tenantApi'
@@ -17,11 +18,19 @@ interface AppContextValue {
   refreshTenants: () => Promise<void>
   asgardeoToken: string | null
   setAsgardeoToken: (t: string | null) => void
+  asgardeo: any
 }
 
 const AppContext = createContext<AppContextValue>(null!)
 
 export function AppProvider({ children }: { children: ReactNode }) {
+  let asgardeo: any = null
+  try {
+    asgardeo = useAsgardeo()
+  } catch {
+    // AsgardeoProvider fallback
+  }
+
   const [isDark, setIsDark] = useState(() => {
     return localStorage.getItem('invox_theme') === 'dark'
   })
@@ -64,6 +73,35 @@ export function AppProvider({ children }: { children: ReactNode }) {
     refreshTenants()
   }, [])
 
+  // Synchronize authenticated state with Asgardeo SDK
+  useEffect(() => {
+    if (asgardeo && asgardeo.isSignedIn) {
+      setIsAuthenticated(true)
+      localStorage.setItem('invox_auth', 'true')
+
+      asgardeo.getDecodedIdToken?.().then((token: any) => {
+        if (token) {
+          const email = token.email || token.sub || 'admin@invox.local'
+          const role: UserRole = token.roles?.includes('Invox_accountant')
+            ? 'Accountant'
+            : token.roles?.includes('Invox_viewer')
+              ? 'Viewer'
+              : 'Admin'
+          const userObj: AppUser = {
+            id: token.sub || 'user-1',
+            name: token.given_name ? `${token.given_name} ${token.family_name || ''}`.trim() : email.split('@')[0],
+            email,
+            role,
+            initials: (token.given_name?.[0] || email[0]).toUpperCase(),
+            color: '#6366f1'
+          }
+          setCurrentUser(userObj)
+          localStorage.setItem('invox_user', JSON.stringify(userObj))
+        }
+      }).catch(() => {})
+    }
+  }, [asgardeo?.isSignedIn])
+
   const toggleDark = () => {
     setIsDark(d => {
       const next = !d
@@ -95,6 +133,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem('invox_auth')
     localStorage.removeItem('invox_token')
     localStorage.removeItem('invox_user')
+    if (asgardeo && asgardeo.isSignedIn) {
+      asgardeo.signOut?.().catch(() => {})
+    }
   }
 
   const handleSetCurrentUser = (u: AppUser) => {
@@ -117,6 +158,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       refreshTenants,
       asgardeoToken,
       setAsgardeoToken,
+      asgardeo,
     }}>
       {children}
     </AppContext.Provider>

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
 import { useNavigate, useSearchParams } from 'react-router'
 import { Zap, Sun, Moon, ArrowRight, ShieldCheck, Lock, Building2, ChevronRight, AlertCircle, Loader2 } from 'lucide-react'
@@ -7,7 +7,7 @@ import { asgardeoConfig } from '../config/asgardeoConfig'
 import { tenantApi } from '../services/tenantApi'
 
 export function LoginPage() {
-  const { isDark, toggleDark, login, setCurrentTenant, refreshTenants } = useApp()
+  const { isDark, toggleDark, asgardeo, isAuthenticated, currentTenant } = useApp()
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
 
@@ -15,6 +15,14 @@ export function LoginPage() {
   const [showOrgInput, setShowOrgInput] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+
+  // If already authenticated via Asgardeo, auto-redirect to dashboard
+  useEffect(() => {
+    if (isAuthenticated) {
+      const slug = currentTenant?.slug || 'horizon'
+      navigate(`/${slug}/dashboard`, { replace: true })
+    }
+  }, [isAuthenticated, currentTenant])
 
   const handleAsgardeoLogin = async (federatedIdp?: string) => {
     setError('')
@@ -27,47 +35,33 @@ export function LoginPage() {
         if (orgFromQuery) targetSubdomain = orgFromQuery.toLowerCase()
       }
 
-      // If user typed a custom company subdomain, verify tenant existence
-      let targetTenant = null
+      // If user specified an organization domain, check validity
       if (targetSubdomain) {
-        targetTenant = await tenantApi.getTenantBySubdomain(targetSubdomain)
-        if (!targetTenant) {
-          setError(`No organization workspace found for '${targetSubdomain}'. Please check your subdomain.`)
+        const tenant = await tenantApi.getTenantBySubdomain(targetSubdomain)
+        if (!tenant) {
+          setError(`No workspace found for domain '${targetSubdomain}'. Please verify your organization subdomain.`)
           setLoading(false)
           return
         }
       }
 
-      // Construct Asgardeo OIDC authorization URL
-      const redirectUri = encodeURIComponent(`${window.location.origin}/auth/callback${targetSubdomain ? `?org=${targetSubdomain}` : ''}`)
-      const authUrl = `${asgardeoConfig.baseUrl}/oauth2/authorize?client_id=${asgardeoConfig.clientID}&response_type=code&scope=${encodeURIComponent(asgardeoConfig.scope.join(' '))}&redirect_uri=${redirectUri}${federatedIdp ? `&fidp=${federatedIdp}` : ''}`
-
-      // For direct seamless login in dev/browser:
-      const slug = targetSubdomain || 'horizon'
-      if (targetTenant) {
-        setCurrentTenant({
-          id: targetTenant.id,
-          name: targetTenant.companyName,
-          plan: targetTenant.plan || 'Standard',
-          initials: targetTenant.companyName.slice(0, 2).toUpperCase(),
-          color: '#6366f1',
-          slug: targetTenant.subdomain
-        })
+      // Trigger Asgardeo SDK Sign-In or direct redirect
+      if (asgardeo?.signIn) {
+        if (federatedIdp) {
+          await asgardeo.signIn({ fidp: federatedIdp })
+        } else {
+          await asgardeo.signIn()
+        }
+      } else {
+        const redirectUri = encodeURIComponent(asgardeoConfig.signInRedirectURL)
+        const authUrl = `${asgardeoConfig.baseUrl}/oauth2/authorize?client_id=${asgardeoConfig.clientID}&response_type=code&scope=${encodeURIComponent(asgardeoConfig.scope.join(' '))}&redirect_uri=${redirectUri}${federatedIdp ? `&fidp=${federatedIdp}` : ''}`
+        window.location.href = authUrl
       }
-
-      login({
-        name: 'Asgardeo Admin',
-        email: `admin@${slug}.invox.local`,
-        role: 'Admin'
-      })
-      await refreshTenants()
-
-      setTimeout(() => {
-        navigate(`/${slug}/dashboard`, { replace: true })
-      }, 500)
     } catch {
-      setError('Failed to initiate Asgardeo authentication flow.')
-      setLoading(false)
+      // Direct redirect fallback to Asgardeo OIDC authorize
+      const redirectUri = encodeURIComponent(asgardeoConfig.signInRedirectURL)
+      const authUrl = `${asgardeoConfig.baseUrl}/oauth2/authorize?client_id=${asgardeoConfig.clientID}&response_type=code&scope=${encodeURIComponent(asgardeoConfig.scope.join(' '))}&redirect_uri=${redirectUri}${federatedIdp ? `&fidp=${federatedIdp}` : ''}`
+      window.location.href = authUrl
     }
   }
 
@@ -121,7 +115,7 @@ export function LoginPage() {
           Single Sign-On
         </h1>
         <p className={`text-sm mb-6 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-          Authenticate securely via Asgardeo Identity Provider to access your organization dashboard.
+          Redirecting to Asgardeo Identity Provider for secure authentication.
         </p>
 
         {/* Primary Asgardeo SSO Actions */}
@@ -136,7 +130,7 @@ export function LoginPage() {
           >
             {loading ? (
               <span className="flex items-center gap-2">
-                <Loader2 size={16} className="animate-spin" /> Authenticating with Asgardeo...
+                <Loader2 size={16} className="animate-spin" /> Redirecting to Asgardeo...
               </span>
             ) : (
               <>
@@ -165,7 +159,7 @@ export function LoginPage() {
           </button>
         </div>
 
-        {/* Company Subdomain Portal Option */}
+        {/* Company Subdomain Option */}
         <div className="pt-2">
           <button
             type="button"
