@@ -174,11 +174,14 @@ export function SettingsView() {
     setTeamMembers(prev => prev.filter(m => m.id !== memberId))
   }
 
+  const [inviteError, setInviteError] = useState('')
+
   const handleSendInvite = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!inviteEmail) return
     setInviteLoading(true)
     setInviteSuccess('')
+    setInviteError('')
     try {
       const fName = inviteFirstName.trim() || inviteEmail.split('@')[0]
       const lName = inviteLastName.trim() || 'Member'
@@ -196,17 +199,10 @@ export function SettingsView() {
         setInviteFirstName('')
         setInviteLastName('')
         setInviteSuccess('')
+        setInviteError('')
       }, 1500)
     } catch (err: any) {
-      setInviteSuccess(`Invitation sent: ${err.message || 'Queued in system'}`)
-      await fetchTeam()
-      setTimeout(() => {
-        setInviteModalOpen(false)
-        setInviteEmail('')
-        setInviteFirstName('')
-        setInviteLastName('')
-        setInviteSuccess('')
-      }, 1500)
+      setInviteError(err.message || 'Failed to send invitation')
     } finally {
       setInviteLoading(false)
     }
@@ -272,6 +268,12 @@ export function SettingsView() {
                   <option value="VIEWER">Viewer (Read Only)</option>
                 </select>
               </div>
+
+              {inviteError && (
+                <p className="text-xs text-rose-400 bg-rose-500/10 border border-rose-500/20 rounded-xl p-2.5">
+                  {inviteError}
+                </p>
+              )}
 
               {inviteSuccess && (
                 <p className="text-xs text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-2.5">
