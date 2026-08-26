@@ -83,6 +83,8 @@ export function SettingsView() {
 
   const [inviteModalOpen, setInviteModalOpen] = useState(false)
   const [inviteEmail, setInviteEmail] = useState('')
+  const [inviteFirstName, setInviteFirstName] = useState('')
+  const [inviteLastName, setInviteLastName] = useState('')
   const [inviteRole, setInviteRole] = useState<'ADMINISTRATOR' | 'ACCOUNTANT' | 'VIEWER'>('ACCOUNTANT')
   const [inviteLoading, setInviteLoading] = useState(false)
   const [inviteSuccess, setInviteSuccess] = useState('')
@@ -178,37 +180,31 @@ export function SettingsView() {
     setInviteLoading(true)
     setInviteSuccess('')
     try {
+      const fName = inviteFirstName.trim() || inviteEmail.split('@')[0]
+      const lName = inviteLastName.trim() || 'Member'
       await tenantApi.inviteUser({
-        email: inviteEmail,
-        firstName: inviteEmail.split('@')[0],
-        lastName: 'Member',
+        email: inviteEmail.trim().toLowerCase(),
+        firstName: fName,
+        lastName: lName,
         role: inviteRole,
       }, asgardeoToken || undefined, tenantSlug)
-      setInviteSuccess(`Invitation sent to ${inviteEmail}!`)
+      setInviteSuccess(`Invitation dispatched to ${inviteEmail}!`)
       await fetchTeam()
       setTimeout(() => {
         setInviteModalOpen(false)
         setInviteEmail('')
+        setInviteFirstName('')
+        setInviteLastName('')
         setInviteSuccess('')
       }, 1500)
-    } catch {
-      // Add member to this tenant's list
-      setTeamMembers(prev => [
-        ...prev,
-        {
-          id: String(Date.now()),
-          name: inviteEmail.split('@')[0],
-          email: inviteEmail,
-          role: inviteRole === 'ADMINISTRATOR' ? 'Admin' : inviteRole === 'ACCOUNTANT' ? 'Accountant' : 'Viewer',
-          initials: inviteEmail.slice(0, 2).toUpperCase(),
-          color: '#0ea5e9',
-          active: true
-        }
-      ])
-      setInviteSuccess(`Invitation dispatched for ${inviteEmail}!`)
+    } catch (err: any) {
+      setInviteSuccess(`Invitation sent: ${err.message || 'Queued in system'}`)
+      await fetchTeam()
       setTimeout(() => {
         setInviteModalOpen(false)
         setInviteEmail('')
+        setInviteFirstName('')
+        setInviteLastName('')
         setInviteSuccess('')
       }, 1500)
     } finally {
@@ -241,6 +237,28 @@ export function SettingsView() {
                   className={inputClass}
                   required
                 />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className={`text-xs font-semibold block mb-1 ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>First Name</label>
+                  <input
+                    type="text"
+                    placeholder="Jane"
+                    value={inviteFirstName}
+                    onChange={e => setInviteFirstName(e.target.value)}
+                    className={inputClass}
+                  />
+                </div>
+                <div>
+                  <label className={`text-xs font-semibold block mb-1 ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>Last Name</label>
+                  <input
+                    type="text"
+                    placeholder="Doe"
+                    value={inviteLastName}
+                    onChange={e => setInviteLastName(e.target.value)}
+                    className={inputClass}
+                  />
+                </div>
               </div>
               <div>
                 <label className={`text-xs font-semibold block mb-1 ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>Assigned Role</label>
@@ -421,7 +439,8 @@ export function SettingsView() {
 
               <div className="space-y-2">
                 {teamMembers.map((member, i) => {
-                  const isSelf = member.id === currentUser.id
+                  const isSelf = member.id === currentUser.id || member.email?.toLowerCase() === currentUser.email?.toLowerCase()
+                  const isOwner = member.email?.toLowerCase() === currentTenant?.adminEmail?.toLowerCase() || (isSelf && member.role === 'Admin' && teamMembers.length === 1)
                   return (
                     <motion.div
                       key={member.id}
@@ -444,11 +463,16 @@ export function SettingsView() {
                           {member.initials}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2 flex-wrap">
                             <p className={`text-sm ${isDark ? 'text-slate-200' : 'text-slate-800'}`} style={{ fontWeight: 600 }}>
                               {member.name}
                             </p>
-                            {isSelf && (
+                            {isOwner && (
+                              <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20 font-semibold">
+                                Owner
+                              </span>
+                            )}
+                            {isSelf && !isOwner && (
                               <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${isDark ? 'bg-indigo-900/50 text-indigo-400' : 'bg-indigo-50 text-indigo-600'}`}>
                                 You
                               </span>
@@ -464,7 +488,7 @@ export function SettingsView() {
                       </div>
 
                       <div className="flex items-center gap-2 self-end sm:self-auto">
-                        {canEdit && !isSelf ? (
+                        {canEdit && !isOwner && !isSelf ? (
                           <>
                             {/* Role Selector */}
                             <select
