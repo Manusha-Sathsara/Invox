@@ -23,6 +23,59 @@ interface AppContextValue {
 
 const AppContext = createContext<AppContextValue>(null!)
 
+function isUuid(str: string): boolean {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str.trim())
+}
+
+function formatNameFromEmail(email: string): string {
+  const localPart = email.split('@')[0]
+  if (isUuid(localPart)) return 'Manusha Sathsara'
+  return localPart
+    .replace(/[._-]/g, ' ')
+    .replace(/\d+/g, '')
+    .trim()
+    .replace(/\b\w/g, c => c.toUpperCase()) || 'Manusha Sathsara'
+}
+
+function resolveUserFromToken(token: any): AppUser {
+  const email = token.email || token.username || (token.sub && !isUuid(token.sub) ? token.sub : 'admin@horizon.invox.local')
+  let name = ''
+  
+  if (token.given_name) {
+    name = `${token.given_name} ${token.family_name || ''}`.trim()
+  } else if (token.name && !isUuid(token.name)) {
+    name = token.name
+  } else if (token.username && !isUuid(token.username)) {
+    name = token.username.includes('@') ? formatNameFromEmail(token.username) : token.username
+  } else if (token.email) {
+    name = formatNameFromEmail(token.email)
+  } else {
+    name = 'Manusha Sathsara'
+  }
+
+  const role: UserRole = token.roles?.includes('Invox_accountant')
+    ? 'Accountant'
+    : token.roles?.includes('Invox_viewer')
+      ? 'Viewer'
+      : 'Admin'
+
+  const initials = name
+    .split(' ')
+    .filter(Boolean)
+    .map(n => n[0])
+    .join('')
+    .toUpperCase()
+    .slice(0, 2) || 'MS'
+
+  return {
+    id: token.sub || 'admin-1',
+    name,
+    email: email.includes('@') ? email : `${email}@horizon.invox.local`,
+    role,
+    initials,
+  }
+}
+
 export function AppProvider({ children }: { children: ReactNode }) {
   let asgardeo: any = null
   try {
@@ -42,7 +95,19 @@ export function AppProvider({ children }: { children: ReactNode }) {
   })
   const [currentUser, setCurrentUser] = useState<AppUser>(() => {
     const saved = localStorage.getItem('invox_user')
-    return saved ? JSON.parse(saved) : APP_USERS.Admin
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved)
+        if (parsed && parsed.name && !isUuid(parsed.name)) return parsed
+      } catch {}
+    }
+    return {
+      id: '1',
+      name: 'Manusha Sathsara',
+      email: 'jayasinghemanushasathsara@gmail.com',
+      role: 'Admin',
+      initials: 'MS'
+    }
   })
   const [tenants, setTenants] = useState<Tenant[]>(TENANTS)
   const [currentTenant, setCurrentTenant] = useState<Tenant>(TENANTS[0])
@@ -81,20 +146,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
       asgardeo.getDecodedIdToken?.().then((token: any) => {
         if (token) {
-          const email = token.email || token.sub || 'admin@invox.local'
-          const role: UserRole = token.roles?.includes('Invox_accountant')
-            ? 'Accountant'
-            : token.roles?.includes('Invox_viewer')
-              ? 'Viewer'
-              : 'Admin'
-          const userObj: AppUser = {
-            id: token.sub || 'user-1',
-            name: token.given_name ? `${token.given_name} ${token.family_name || ''}`.trim() : email.split('@')[0],
-            email,
-            role,
-            initials: (token.given_name?.[0] || email[0]).toUpperCase(),
-            color: '#6366f1'
-          }
+          const userObj = resolveUserFromToken(token)
           setCurrentUser(userObj)
           localStorage.setItem('invox_user', JSON.stringify(userObj))
         }
@@ -114,13 +166,17 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setIsAuthenticated(true)
     localStorage.setItem('invox_auth', 'true')
     if (userOverride) {
+      let finalName = userOverride.name || currentUser.name
+      if (isUuid(finalName)) {
+        finalName = userOverride.email ? formatNameFromEmail(userOverride.email) : 'Manusha Sathsara'
+      }
+
       const updated: AppUser = {
         ...currentUser,
         ...userOverride,
+        name: finalName,
         role: (userOverride.role as UserRole) || currentUser.role,
-        initials: userOverride.name
-          ? userOverride.name.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2)
-          : currentUser.initials,
+        initials: finalName.split(' ').filter(Boolean).map((n: string) => n[0]).join('').toUpperCase().slice(0, 2) || 'MS',
       }
       setCurrentUser(updated)
       localStorage.setItem('invox_user', JSON.stringify(updated))
@@ -133,14 +189,28 @@ export function AppProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem('invox_auth')
     localStorage.removeItem('invox_token')
     localStorage.removeItem('invox_user')
-    if (asgardeo && asgardeo.isSignedIn) {
-      asgardeo.signOut?.().catch(() => {})
+    sessionStorage.clear()
+
+    // Clear local authentication cookies
+    if (typeof document !== 'undefined') {
+      document.cookie.split(';').forEach((c) => {
+        document.cookie = c.replace(/^ +/, '').replace(/=.*/, '=;expires=' + new Date().toUTCString() + ';path=/')
+      })
+    }
+
+    if (typeof window !== 'undefined') {
+      window.location.href = '/'
     }
   }
 
   const handleSetCurrentUser = (u: AppUser) => {
-    setCurrentUser(u)
-    localStorage.setItem('invox_user', JSON.stringify(u))
+    let cleanUser = { ...u }
+    if (isUuid(cleanUser.name)) {
+      cleanUser.name = formatNameFromEmail(cleanUser.email || 'admin@invox.local')
+      cleanUser.initials = cleanUser.name.split(' ').filter(Boolean).map(n => n[0]).join('').toUpperCase().slice(0, 2) || 'MS'
+    }
+    setCurrentUser(cleanUser)
+    localStorage.setItem('invox_user', JSON.stringify(cleanUser))
   }
 
   return (

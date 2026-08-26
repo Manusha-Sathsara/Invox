@@ -288,12 +288,35 @@ public class TenantService {
 
     private Tenant resolveCurrentTenant() {
         String orgId = TenantContext.getOrgId();
-        if (orgId == null || orgId.isBlank()) {
-            throw new IllegalStateException("Missing tenant organization context in authenticated token.");
+        if (orgId != null && !orgId.isBlank()) {
+            // Try by Asgardeo Org ID
+            var tenantByOrgId = tenantRepository.findByAsgardeoOrgId(orgId);
+            if (tenantByOrgId.isPresent()) {
+                return tenantByOrgId.get();
+            }
+
+            // Try by Subdomain / Handle
+            var tenantBySubdomain = tenantRepository.findBySubdomainIgnoreCase(orgId);
+            if (tenantBySubdomain.isPresent()) {
+                return tenantBySubdomain.get();
+            }
         }
 
-        return tenantRepository.findByAsgardeoOrgId(orgId)
-                .orElseThrow(() -> new IllegalArgumentException("Tenant organization not found for orgId: " + orgId));
+        // Fallback: Try resolving by authenticated user's email
+        String userEmail = TenantContext.getUserEmail();
+        if (userEmail != null && !userEmail.isBlank()) {
+            var tenantUser = tenantUserRepository.findByEmailIgnoreCase(userEmail.trim());
+            if (tenantUser.isPresent()) {
+                return tenantUser.get().getTenant();
+            }
+
+            var tenantByAdmin = tenantRepository.findByAdminEmailIgnoreCase(userEmail.trim());
+            if (tenantByAdmin.isPresent()) {
+                return tenantByAdmin.get();
+            }
+        }
+
+        throw new IllegalStateException("Tenant organization context required. Please provide a valid X-Tenant-Id header or organization context.");
     }
 
     private TenantUserDto toUserDto(TenantUser user) {

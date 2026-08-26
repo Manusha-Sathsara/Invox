@@ -103,10 +103,13 @@ export const tenantApi = {
     }
   },
 
-  async inviteUser(payload: UserInvitePayload, token?: string): Promise<TenantUserResponse> {
+  async inviteUser(payload: UserInvitePayload, token?: string, tenantId?: string): Promise<TenantUserResponse> {
     const headers: Record<string, string> = { 'Content-Type': 'application/json' };
     if (token) {
       headers['Authorization'] = `Bearer ${token}`;
+    }
+    if (tenantId) {
+      headers['X-Tenant-Id'] = tenantId;
     }
 
     const res = await fetch(`${API_BASE_URL}/tenants/users/invite`, {
@@ -129,10 +132,13 @@ export const tenantApi = {
     return res.json();
   },
 
-  async getTenantUsers(token?: string): Promise<TenantUserResponse[]> {
+  async getTenantUsers(token?: string, tenantId?: string): Promise<TenantUserResponse[]> {
     const headers: Record<string, string> = {};
     if (token) {
       headers['Authorization'] = `Bearer ${token}`;
+    }
+    if (tenantId) {
+      headers['X-Tenant-Id'] = tenantId;
     }
 
     try {
@@ -144,10 +150,13 @@ export const tenantApi = {
     }
   },
 
-  async updateUser(userId: string, payload: UserUpdatePayload, token?: string): Promise<TenantUserResponse> {
+  async updateUser(userId: string, payload: UserUpdatePayload, token?: string, tenantId?: string): Promise<TenantUserResponse> {
     const headers: Record<string, string> = { 'Content-Type': 'application/json' };
     if (token) {
       headers['Authorization'] = `Bearer ${token}`;
+    }
+    if (tenantId) {
+      headers['X-Tenant-Id'] = tenantId;
     }
 
     const res = await fetch(`${API_BASE_URL}/tenants/users/${userId}`, {
@@ -162,10 +171,13 @@ export const tenantApi = {
     return res.json();
   },
 
-  async toggleUserStatus(userId: string, active: boolean, token?: string): Promise<TenantUserResponse> {
+  async toggleUserStatus(userId: string, active: boolean, token?: string, tenantId?: string): Promise<TenantUserResponse> {
     const headers: Record<string, string> = {};
     if (token) {
       headers['Authorization'] = `Bearer ${token}`;
+    }
+    if (tenantId) {
+      headers['X-Tenant-Id'] = tenantId;
     }
 
     const res = await fetch(`${API_BASE_URL}/tenants/users/${userId}/status?active=${active}`, {
@@ -179,10 +191,13 @@ export const tenantApi = {
     return res.json();
   },
 
-  async removeUser(userId: string, token?: string): Promise<void> {
+  async removeUser(userId: string, token?: string, tenantId?: string): Promise<void> {
     const headers: Record<string, string> = {};
     if (token) {
       headers['Authorization'] = `Bearer ${token}`;
+    }
+    if (tenantId) {
+      headers['X-Tenant-Id'] = tenantId;
     }
 
     const res = await fetch(`${API_BASE_URL}/tenants/users/${userId}`, {

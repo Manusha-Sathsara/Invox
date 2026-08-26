@@ -1,4 +1,4 @@
-  import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
 import { useNavigate } from 'react-router'
 import {
@@ -8,6 +8,7 @@ import {
   RefreshCw, Sparkles, Building2, CreditCard,
 } from 'lucide-react'
 import { useApp } from '../context/AppContext'
+import { asgardeoConfig } from '../config/asgardeoConfig'
 
 function useInView(threshold = 0.12) {
   const ref = useRef<HTMLDivElement>(null)
@@ -65,7 +66,7 @@ const NAV_LINKS = [
 ]
 
 export function LandingPage() {
-  const { isDark, toggleDark } = useApp()
+  const { isDark, toggleDark, isAuthenticated, currentTenant } = useApp()
   const navigate = useNavigate()
 
   const [navOpen,        setNavOpen]        = useState(false)
@@ -75,6 +76,18 @@ export function LandingPage() {
   const [contactForm,    setContactForm]    = useState({ name: '', email: '', company: '', message: '' })
   const [contactSent,    setContactSent]    = useState(false)
   const [contactLoading, setContactLoading] = useState(false)
+
+  const handleSignIn = () => {
+    const redirectUri = encodeURIComponent(`${window.location.origin}/auth/callback`)
+    const authUrl = `${asgardeoConfig.baseUrl}/oauth2/authorize?client_id=${asgardeoConfig.clientID}&response_type=code&scope=${encodeURIComponent(asgardeoConfig.scope.join(' '))}&redirect_uri=${redirectUri}`
+    window.location.href = authUrl
+  }
+
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.location.search.includes('code=')) {
+      navigate(`/auth/callback${window.location.search}`, { replace: true })
+    }
+  }, [navigate])
 
   useEffect(() => {
     const h = () => setScrolled(window.scrollY > 16)
@@ -98,11 +111,11 @@ export function LandingPage() {
     : 'bg-white/70 backdrop-blur-xl border border-white/80 shadow-xl shadow-black/5'
 
   const glassStrong = isDark
-    ? 'bg-white/[0.06] backdrop-blur-2xl border border-white/[0.10] shadow-2xl shadow-black/40'
-    : 'bg-white/85 backdrop-blur-2xl border border-white/90 shadow-2xl'
+    ? 'bg-white/[0.07] backdrop-blur-2xl border border-white/[0.12] shadow-2xl'
+    : 'bg-white/90 backdrop-blur-2xl border border-white shadow-2xl shadow-black/10'
 
   const tp = isDark ? 'text-white' : 'text-slate-900'
-  const ts = isDark ? 'text-slate-400' : 'text-slate-600'
+  const ts = isDark ? 'text-slate-400' : 'text-slate-500'
   const tm = isDark ? 'text-slate-500' : 'text-slate-400'
 
   const inputCls = `w-full px-4 py-3 rounded-xl border text-sm outline-none transition-all ${
@@ -119,13 +132,13 @@ export function LandingPage() {
   const contactAnim  = useInView()
 
   return (
-    <div className="relative">
+    <div className={`min-h-screen ${isDark ? 'text-slate-100' : 'text-slate-900'}`} style={{ fontFamily: 'Inter, sans-serif' }}>
       {/* ── NAVBAR ── */}
       <header className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
         scrolled
           ? isDark
-            ? 'bg-slate-950/80 backdrop-blur-xl border-b border-white/[0.06] shadow-lg shadow-black/30'
-            : 'bg-white/80 backdrop-blur-xl border-b border-black/[0.06] shadow-lg shadow-black/5'
+            ? 'bg-slate-950/80 backdrop-blur-xl border-b border-white/[0.06] shadow-lg shadow-black/20'
+            : 'bg-white/80 backdrop-blur-xl border-b border-black/[0.06] shadow-sm'
           : 'bg-transparent'
       }`}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -149,7 +162,7 @@ export function LandingPage() {
               <button onClick={toggleDark} className={`p-2 rounded-lg transition-colors ${isDark ? 'text-amber-400 hover:bg-white/[0.06]' : 'text-slate-500 hover:bg-black/[0.04]'}`}>
                 {isDark ? <Sun size={18} /> : <Moon size={18} />}
               </button>
-              <button onClick={() => navigate('/login')} className={`px-4 py-2 rounded-xl text-sm transition-colors ${isDark ? 'text-slate-300 hover:text-white hover:bg-white/[0.06]' : 'text-slate-700 hover:text-slate-900 hover:bg-black/[0.04]'}`} style={{ fontWeight: 600 }}>
+              <button onClick={handleSignIn} className={`px-4 py-2 rounded-xl text-sm transition-colors ${isDark ? 'text-slate-300 hover:text-white hover:bg-white/[0.06]' : 'text-slate-700 hover:text-slate-900 hover:bg-black/[0.04]'}`} style={{ fontWeight: 600 }}>
                 Sign in
               </button>
               <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }} onClick={() => navigate('/register')} className="px-5 py-2 rounded-xl text-sm text-white shadow-lg shadow-indigo-500/25" style={{ background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)', fontWeight: 600 }}>
@@ -178,7 +191,7 @@ export function LandingPage() {
                   </button>
                 ))}
                 <div className="pt-3 flex gap-3">
-                  <button onClick={() => navigate('/login')} className={`flex-1 py-2.5 rounded-xl text-sm text-center border ${isDark ? 'border-white/[0.08] text-slate-300' : 'border-black/[0.08] text-slate-700'}`} style={{ fontWeight: 600 }}>Sign in</button>
+                  <button onClick={handleSignIn} className={`flex-1 py-2.5 rounded-xl text-sm text-center border ${isDark ? 'border-white/[0.08] text-slate-300' : 'border-black/[0.08] text-slate-700'}`} style={{ fontWeight: 600 }}>Sign in</button>
                   <button onClick={() => navigate('/register')} className="flex-1 py-2.5 rounded-xl text-sm text-white text-center" style={{ background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)', fontWeight: 600 }}>Get started</button>
                 </div>
               </div>

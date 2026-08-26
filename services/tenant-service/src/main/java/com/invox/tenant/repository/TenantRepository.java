@@ -11,6 +11,7 @@ import java.util.UUID;
 public interface TenantRepository extends JpaRepository<Tenant, UUID> {
     Optional<Tenant> findBySubdomainIgnoreCase(String subdomain);
     Optional<Tenant> findByAsgardeoOrgId(String asgardeoOrgId);
+    Optional<Tenant> findByAdminEmailIgnoreCase(String adminEmail);
     boolean existsBySubdomainIgnoreCase(String subdomain);
     boolean existsByAdminEmailIgnoreCase(String adminEmail);
 }

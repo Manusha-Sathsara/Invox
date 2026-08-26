@@ -39,7 +39,7 @@ const roleConfigDark = {
 }
 
 export function Sidebar({ currentView, collapsed, onCollapsedChange, mobileOpen }: SidebarProps) {
-  const { isDark, currentTenant, setCurrentTenant, currentUser, setCurrentUser, logout } = useApp()
+  const { isDark, tenants, currentTenant, setCurrentTenant, currentUser, setCurrentUser, logout } = useApp()
   const navigate = useNavigate()
 
   const [tenantDropOpen, setTenantDropOpen] = useState(false)

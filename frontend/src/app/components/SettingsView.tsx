@@ -1,16 +1,16 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { motion } from 'motion/react'
 import {
   Settings, Users, Bell, Shield, CreditCard, Globe,
-  Building, Mail, Phone, Check, ChevronRight,
+  Building, Mail, Phone, Check, ChevronRight, UserPlus, RefreshCw, AlertCircle
 } from 'lucide-react'
 import { useApp } from '../context/AppContext'
+import { tenantApi } from '../services/tenantApi'
 
-const TEAM = [
-  { id: '1', name: 'Alex Morgan', email: 'alex@acme.com', role: 'Admin', initials: 'AM', color: '#6366f1' },
-  { id: '2', name: 'Jamie Lee', email: 'jamie@acme.com', role: 'Accountant', initials: 'JL', color: '#10b981' },
-  { id: '3', name: 'Sam Chen', email: 'sam@acme.com', role: 'Viewer', initials: 'SC', color: '#8b5cf6' },
-  { id: '4', name: 'Taylor Kim', email: 'taylor@acme.com', role: 'Accountant', initials: 'TK', color: '#f59e0b' },
+const DEFAULT_TEAM = [
+  { id: '1', name: 'Manusha Sathsara', email: 'jayasinghemanushasathsara@gmail.com', role: 'Admin', initials: 'MS', color: '#6366f1', active: true },
+  { id: '2', name: 'Jamie Lee', email: 'jamie@acme.com', role: 'Accountant', initials: 'JL', color: '#10b981', active: true },
+  { id: '3', name: 'Sam Chen', email: 'sam@acme.com', role: 'Viewer', initials: 'SC', color: '#8b5cf6', active: true },
 ]
 
 const SETTING_TABS = [
@@ -60,12 +60,12 @@ const ROLE_COLORS: Record<string, string> = {
 }
 
 export function SettingsView() {
-  const { isDark, currentUser } = useApp()
-  const [activeTab, setActiveTab] = useState('company')
-  const [companyName, setCompanyName] = useState('Acme Corp')
-  const [companyEmail, setCompanyEmail] = useState('billing@acme.com')
+  const { isDark, currentUser, currentTenant, asgardeoToken } = useApp()
+  const [activeTab, setActiveTab] = useState('team')
+  const [companyName, setCompanyName] = useState(currentTenant?.name || 'Horizon Global')
+  const [companyEmail, setCompanyEmail] = useState('billing@horizon.invox.local')
   const [companyPhone, setCompanyPhone] = useState('+1 415 123 4567')
-  const [companyAddress, setCompanyAddress] = useState('123 Market St, San Francisco CA')
+  const [companyAddress, setCompanyAddress] = useState('100 Silicon Way, Tech Park')
   const [saved, setSaved] = useState(false)
 
   const canEdit = currentUser.role === 'Admin'
@@ -90,12 +90,65 @@ export function SettingsView() {
   const [inviteRole, setInviteRole] = useState<'ADMINISTRATOR' | 'ACCOUNTANT' | 'VIEWER'>('ACCOUNTANT')
   const [inviteLoading, setInviteLoading] = useState(false)
   const [inviteSuccess, setInviteSuccess] = useState('')
-  const [teamMembers, setTeamMembers] = useState(TEAM)
+  const [teamMembers, setTeamMembers] = useState<any[]>([])
+  const [loadingTeam, setLoadingTeam] = useState(false)
+
+  const tenantSlug = currentTenant?.slug || currentTenant?.id || 'horizon'
+
+  const fetchTeam = async () => {
+    try {
+      setLoadingTeam(true)
+      const users = await tenantApi.getTenantUsers(asgardeoToken || undefined, tenantSlug)
+      if (users && users.length > 0) {
+        setTeamMembers(users.map((u: any) => ({
+          id: u.id,
+          name: `${u.firstName || ''} ${u.lastName || ''}`.trim() || u.email.split('@')[0],
+          email: u.email,
+          role: u.role === 'ADMINISTRATOR' ? 'Admin' : u.role === 'ACCOUNTANT' ? 'Accountant' : 'Viewer',
+          initials: `${u.firstName?.[0] || u.email[0]}${u.lastName?.[0] || ''}`.toUpperCase(),
+          color: u.role === 'ADMINISTRATOR' ? '#6366f1' : u.role === 'ACCOUNTANT' ? '#10b981' : '#8b5cf6',
+          active: u.active !== false
+        })))
+      } else {
+        // Show current user as the single admin member of this newly created tenant
+        setTeamMembers([
+          {
+            id: 'owner-1',
+            name: currentUser.name || 'Organization Admin',
+            email: currentUser.email || `admin@${tenantSlug}.invox.local`,
+            role: 'Admin',
+            initials: currentUser.initials || 'OA',
+            color: '#6366f1',
+            active: true
+          }
+        ])
+      }
+    } catch {
+      setTeamMembers([
+        {
+          id: 'owner-1',
+          name: currentUser.name || 'Organization Admin',
+          email: currentUser.email || `admin@${tenantSlug}.invox.local`,
+          role: 'Admin',
+          initials: currentUser.initials || 'OA',
+          color: '#6366f1',
+          active: true
+        }
+      ])
+    } finally {
+      setLoadingTeam(false)
+    }
+  }
+
+  useEffect(() => {
+    fetchTeam()
+  }, [currentTenant?.id, currentTenant?.slug])
 
   const handleRoleChange = async (memberId: string, newRole: 'Admin' | 'Accountant' | 'Viewer') => {
+    if (!canEdit) return
     const roleEnum = newRole === 'Admin' ? 'ADMINISTRATOR' : newRole === 'Accountant' ? 'ACCOUNTANT' : 'VIEWER'
     try {
-      await tenantApi.updateUser(memberId, { role: roleEnum as any })
+      await tenantApi.updateUser(memberId, { role: roleEnum as any }, asgardeoToken || undefined, tenantSlug)
     } catch {
       // preview state update
     }
@@ -103,8 +156,9 @@ export function SettingsView() {
   }
 
   const handleToggleStatus = async (memberId: string, currentActive: boolean) => {
+    if (!canEdit) return
     try {
-      await tenantApi.toggleUserStatus(memberId, !currentActive)
+      await tenantApi.toggleUserStatus(memberId, !currentActive, asgardeoToken || undefined, tenantSlug)
     } catch {
       // preview state update
     }
@@ -112,9 +166,10 @@ export function SettingsView() {
   }
 
   const handleRemoveMember = async (memberId: string) => {
+    if (!canEdit) return
     if (!confirm('Are you sure you want to remove this user from your organization?')) return
     try {
-      await tenantApi.removeUser(memberId)
+      await tenantApi.removeUser(memberId, asgardeoToken || undefined, tenantSlug)
     } catch {
       // preview state update
     }
@@ -132,27 +187,16 @@ export function SettingsView() {
         firstName: inviteEmail.split('@')[0],
         lastName: 'Member',
         role: inviteRole,
-      })
+      }, asgardeoToken || undefined, tenantSlug)
       setInviteSuccess(`Invitation sent to ${inviteEmail}!`)
-      setTeamMembers(prev => [
-        ...prev,
-        {
-          id: String(Date.now()),
-          name: inviteEmail.split('@')[0],
-          email: inviteEmail,
-          role: inviteRole === 'ADMINISTRATOR' ? 'Admin' : inviteRole === 'ACCOUNTANT' ? 'Accountant' : 'Viewer',
-          initials: inviteEmail.slice(0, 2).toUpperCase(),
-          color: '#0ea5e9',
-          active: true
-        }
-      ])
+      await fetchTeam()
       setTimeout(() => {
         setInviteModalOpen(false)
         setInviteEmail('')
         setInviteSuccess('')
       }, 1500)
     } catch {
-      // Add local preview member on fallback
+      // Add member to this tenant's list
       setTeamMembers(prev => [
         ...prev,
         {

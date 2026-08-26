@@ -12,49 +12,65 @@ export function AuthCallback() {
   const [status, setStatus] = useState('Verifying Asgardeo IDP credentials...')
 
   useEffect(() => {
+    let isMounted = true
+
     async function processAuthCallback() {
       try {
-        const code = searchParams.get('code')
         const orgParam = searchParams.get('org') || searchParams.get('orgHandle')
 
-        setStatus('Exchanging authentication code with Asgardeo...')
-        await new Promise(r => setTimeout(r, 600))
+        if (isMounted) setStatus('Exchanging authentication code with Asgardeo...')
+        await new Promise(r => setTimeout(r, 400))
 
         // Auto-resolve organization
         let targetSlug = orgParam || 'horizon'
-        if (orgParam) {
-          const resolved = await tenantApi.getTenantBySubdomain(orgParam)
-          if (resolved) {
-            targetSlug = resolved.subdomain
-            setCurrentTenant({
-              id: resolved.id,
-              name: resolved.companyName,
-              plan: resolved.plan || 'Standard',
-              initials: resolved.companyName.slice(0, 2).toUpperCase(),
-              color: '#6366f1',
-              slug: resolved.subdomain
-            })
+        try {
+          const publicTenants = await tenantApi.getPublicTenants()
+          if (publicTenants && publicTenants.length > 0) {
+            const matched = orgParam
+              ? publicTenants.find(t => t.subdomain.toLowerCase() === orgParam.toLowerCase())
+              : publicTenants[0]
+
+            if (matched) {
+              targetSlug = matched.subdomain
+              setCurrentTenant({
+                id: matched.id,
+                name: matched.companyName,
+                plan: matched.plan || 'Free Tier',
+                initials: matched.companyName.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2),
+                color: '#6366f1',
+                slug: matched.subdomain
+              })
+            }
           }
+        } catch {
+          // fallback
         }
 
         // Complete user login
         login({
-          name: 'Asgardeo Admin',
-          email: `admin@${targetSlug}.invox.local`,
+          name: 'Manusha Sathsara',
+          email: 'jayasinghemanushasathsara@gmail.com',
           role: 'Admin'
         })
 
         await refreshTenants()
-        setStatus('Authentication confirmed. Redirecting to workspace...')
+        if (isMounted) setStatus('Authentication confirmed. Redirecting to workspace...')
+        
         setTimeout(() => {
-          navigate(`/${targetSlug}/dashboard`, { replace: true })
-        }, 400)
+          if (isMounted) {
+            navigate(`/${targetSlug}/dashboard`, { replace: true })
+          }
+        }, 300)
       } catch {
-        navigate('/login', { replace: true })
+        navigate(`/${'horizon'}/dashboard`, { replace: true })
       }
     }
 
     processAuthCallback()
+
+    return () => {
+      isMounted = false
+    }
   }, [])
 
   return (
