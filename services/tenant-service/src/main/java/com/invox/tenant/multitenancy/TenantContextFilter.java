@@ -22,10 +22,21 @@ public class TenantContextFilter extends OncePerRequestFilter {
                                     HttpServletResponse response,
                                     FilterChain filterChain) throws ServletException, IOException {
         try {
-            // 1. Extract from X-Tenant-Id header if passed
+            // 1. Extract from X-Tenant-Id header, tenant header, or query param
             String headerTenantId = request.getHeader("X-Tenant-Id");
+            if (headerTenantId == null || headerTenantId.isBlank()) {
+                headerTenantId = request.getHeader("tenant");
+            }
+            if (headerTenantId == null || headerTenantId.isBlank()) {
+                headerTenantId = request.getParameter("tenant");
+            }
             if (headerTenantId != null && !headerTenantId.trim().isEmpty()) {
                 TenantContext.setOrgId(headerTenantId.trim());
+            }
+
+            String userEmailHeader = request.getHeader("X-User-Email");
+            if (userEmailHeader != null && !userEmailHeader.isBlank()) {
+                TenantContext.setUserEmail(userEmailHeader.trim());
             }
 
             // 2. Extract from validated JWT token

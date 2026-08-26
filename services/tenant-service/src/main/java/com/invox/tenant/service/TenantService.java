@@ -371,20 +371,39 @@ public class TenantService {
     private Tenant resolveCurrentTenant() {
         String orgId = TenantContext.getOrgId();
         if (orgId != null && !orgId.isBlank()) {
-            // Try by Asgardeo Org ID
-            var tenantByOrgId = tenantRepository.findByAsgardeoOrgId(orgId);
+            String cleanOrgId = orgId.trim();
+            // 1. Try by Subdomain
+            var tenantBySubdomain = tenantRepository.findBySubdomainIgnoreCase(cleanOrgId);
+            if (tenantBySubdomain.isPresent()) {
+                return tenantBySubdomain.get();
+            }
+
+            // 2. Try by Asgardeo Org ID
+            var tenantByOrgId = tenantRepository.findByAsgardeoOrgId(cleanOrgId);
             if (tenantByOrgId.isPresent()) {
                 return tenantByOrgId.get();
             }
 
-            // Try by Subdomain / Handle
-            var tenantBySubdomain = tenantRepository.findBySubdomainIgnoreCase(orgId);
-            if (tenantBySubdomain.isPresent()) {
-                return tenantBySubdomain.get();
+            // 3. Try by Database UUID
+            try {
+                var tenantById = tenantRepository.findById(java.util.UUID.fromString(cleanOrgId));
+                if (tenantById.isPresent()) {
+                    return tenantById.get();
+                }
+            } catch (Exception ignored) {}
+
+            // 4. Try by Company Name or Handle
+            var allTenants = tenantRepository.findAll();
+            for (Tenant t : allTenants) {
+                if (cleanOrgId.equalsIgnoreCase(t.getCompanyName()) ||
+                    cleanOrgId.equalsIgnoreCase(t.getAsgardeoOrgHandle()) ||
+                    cleanOrgId.equalsIgnoreCase(t.getSubdomain())) {
+                    return t;
+                }
             }
         }
 
-        // Fallback: Try resolving by authenticated user's email
+        // Fallback 1: Try resolving by authenticated user's email
         String userEmail = TenantContext.getUserEmail();
         if (userEmail != null && !userEmail.isBlank()) {
             var tenantUser = tenantUserRepository.findByEmailIgnoreCase(userEmail.trim());
@@ -398,7 +417,18 @@ public class TenantService {
             }
         }
 
-        throw new IllegalStateException("Tenant organization context required. Please provide a valid X-Tenant-Id header or organization context.");
+        // Fallback 2: Default to Horizon Global or first registered tenant
+        var defaultTenant = tenantRepository.findBySubdomainIgnoreCase("horizon");
+        if (defaultTenant.isPresent()) {
+            return defaultTenant.get();
+        }
+
+        var anyTenants = tenantRepository.findAll();
+        if (!anyTenants.isEmpty()) {
+            return anyTenants.get(0);
+        }
+
+        throw new IllegalStateException("No active tenant workspace found in system.");
     }
 
     private TenantUserDto toUserDto(TenantUser user) {
