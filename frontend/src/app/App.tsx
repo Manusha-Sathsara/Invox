@@ -29,18 +29,6 @@ export interface AppUser {
 
 // ─── Static data ─────────────────────────────────────────────────────────────
 
-export const TENANTS: Tenant[] = [
-  { id: '1', name: 'Acme Corp',        plan: 'Pro',        initials: 'AC', color: '#6366f1', slug: 'acme'        },
-  { id: '2', name: 'TechStart Inc',    plan: 'Starter',    initials: 'TS', color: '#8b5cf6', slug: 'techstart'   },
-  { id: '3', name: 'Global Trade Ltd', plan: 'Enterprise', initials: 'GT', color: '#0ea5e9', slug: 'globaltrade'  },
-]
-
-export const APP_USERS: Record<UserRole, AppUser> = {
-  Admin:      { id: '1', name: 'Alex Morgan', email: 'alex@acme.com',  role: 'Admin',      initials: 'AM' },
-  Accountant: { id: '2', name: 'Jamie Lee',   email: 'jamie@acme.com', role: 'Accountant', initials: 'JL' },
-  Viewer:     { id: '3', name: 'Sam Chen',    email: 'sam@acme.com',   role: 'Viewer',     initials: 'SC' },
-}
-
 export const CUSTOMERS = [
   { id: '1', name: 'Stripe Inc',    email: 'billing@stripe.com',  phone: '+1 415 123 4567', totalInvoiced: 45200, outstanding: 0,    country: 'USA'    },
   { id: '2', name: 'Vercel Corp',   email: 'finance@vercel.com',  phone: '+1 650 234 5678', totalInvoiced: 28750, outstanding: 5500, country: 'USA'    },

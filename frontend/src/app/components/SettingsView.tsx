@@ -7,11 +7,7 @@ import {
 import { useApp } from '../context/AppContext'
 import { tenantApi } from '../services/tenantApi'
 
-const DEFAULT_TEAM = [
-  { id: '1', name: 'Manusha Sathsara', email: 'jayasinghemanushasathsara@gmail.com', role: 'Admin', initials: 'MS', color: '#6366f1', active: true },
-  { id: '2', name: 'Jamie Lee', email: 'jamie@acme.com', role: 'Accountant', initials: 'JL', color: '#10b981', active: true },
-  { id: '3', name: 'Sam Chen', email: 'sam@acme.com', role: 'Viewer', initials: 'SC', color: '#8b5cf6', active: true },
-]
+
 
 const SETTING_TABS = [
   { id: 'company', label: 'Company', icon: Building },

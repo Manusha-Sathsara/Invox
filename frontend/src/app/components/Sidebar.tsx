@@ -8,7 +8,6 @@ import {
   ChevronLeft, ChevronRight, LogOut,
 } from 'lucide-react'
 import { useApp } from '../context/AppContext'
-import { APP_USERS } from '../App'
 import type { ViewType, Tenant } from '../App'
 
 interface SidebarProps {
@@ -229,26 +228,6 @@ export function Sidebar({ currentView, collapsed, onCollapsedChange, mobileOpen 
         <div className={`px-3 pb-4 border-t ${isDark ? 'border-white/[0.06]' : 'border-black/[0.05]'}`}>
           {!collapsed && (
             <div className="pt-3">
-              {/* Role switcher (demo) */}
-              <div className="flex gap-1 mb-2">
-                {(Object.keys(APP_USERS) as (keyof typeof APP_USERS)[]).map((role) => (
-                  <button
-                    key={role}
-                    onClick={() => setCurrentUser(APP_USERS[role])}
-                    className={`flex-1 py-1 rounded-lg text-[10px] transition-all border ${
-                      currentUser.role === role
-                        ? 'bg-indigo-500 text-white border-indigo-500'
-                        : isDark
-                          ? 'border-white/[0.08] text-slate-400 hover:bg-white/[0.05]'
-                          : 'border-black/[0.06] text-slate-500 hover:bg-black/[0.03]'
-                    }`}
-                    style={{ fontWeight: 600 }}
-                  >
-                    {role}
-                  </button>
-                ))}
-              </div>
-
               <button
                 ref={userBtnRef}
                 onClick={openUserMenu}
