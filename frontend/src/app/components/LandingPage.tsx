@@ -78,14 +78,14 @@ export function LandingPage() {
   const [contactLoading, setContactLoading] = useState(false)
 
   const handleSignIn = () => {
-    const redirectUri = encodeURIComponent(`${window.location.origin}/auth/callback`)
+    const redirectUri = encodeURIComponent(asgardeoConfig.signInRedirectURL)
     const authUrl = `${asgardeoConfig.baseUrl}/oauth2/authorize?client_id=${asgardeoConfig.clientID}&response_type=code&scope=${encodeURIComponent(asgardeoConfig.scope.join(' '))}&redirect_uri=${redirectUri}`
     window.location.href = authUrl
   }
 
   useEffect(() => {
     if (typeof window !== 'undefined' && window.location.search.includes('code=')) {
-      navigate(`/auth/callback${window.location.search}`, { replace: true })
+      navigate(`/callback${window.location.search}`, { replace: true })
     }
   }, [navigate])
 

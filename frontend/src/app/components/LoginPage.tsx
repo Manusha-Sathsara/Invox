@@ -5,7 +5,7 @@ import { asgardeoConfig } from '../config/asgardeoConfig'
 
 export function LoginPage() {
   useEffect(() => {
-    const redirectUri = encodeURIComponent(`${window.location.origin}/auth/callback`)
+    const redirectUri = encodeURIComponent(asgardeoConfig.signInRedirectURL)
     const authUrl = `${asgardeoConfig.baseUrl}/oauth2/authorize?client_id=${asgardeoConfig.clientID}&response_type=code&scope=${encodeURIComponent(asgardeoConfig.scope.join(' '))}&redirect_uri=${redirectUri}`
     window.location.href = authUrl
   }, [])

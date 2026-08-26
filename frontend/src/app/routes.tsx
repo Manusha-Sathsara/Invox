@@ -57,6 +57,7 @@ export const router = createBrowserRouter([
       { index: true, Component: LandingPage },
       { path: 'login', Component: LoginPage },
       { path: 'register', Component: RegisterPage },
+      { path: 'callback', Component: AuthCallback },
       { path: 'auth/callback', Component: AuthCallback },
       {
         path: ':tenant',

@@ -1,5 +1,5 @@
 export const asgardeoConfig = {
-  signInRedirectURL: typeof window !== 'undefined' ? window.location.origin : 'http://localhost:5173',
+  signInRedirectURL: `${typeof window !== 'undefined' ? window.location.origin : 'http://localhost:5173'}/callback`,
   signOutRedirectURL: typeof window !== 'undefined' ? window.location.origin : 'http://localhost:5173',
   clientID: "pyfb1DKeI8kklfLqIyEfXZc5Urka",
   baseUrl: "https://api.asgardeo.io/t/pixelaura",
