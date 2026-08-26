@@ -102,11 +102,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
       } catch {}
     }
     return {
-      id: '1',
-      name: 'Manusha Sathsara',
-      email: 'jayasinghemanushasathsara@gmail.com',
-      role: 'Admin',
-      initials: 'MS'
+      id: 'guest',
+      name: 'Guest User',
+      email: '',
+      role: 'Viewer',
+      initials: 'GU'
     }
   })
   const [tenants, setTenants] = useState<Tenant[]>(TENANTS)

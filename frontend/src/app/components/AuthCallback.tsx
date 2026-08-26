@@ -46,12 +46,30 @@ export function AuthCallback() {
           // fallback
         }
 
-        // Complete user login
-        login({
-          name: 'Manusha Sathsara',
-          email: 'jayasinghemanushasathsara@gmail.com',
-          role: 'Admin'
-        })
+        // Dynamically resolve logged-in user profile from ID token
+        let authenticatedUser = {
+          name: 'Workspace Member',
+          email: 'user@invox.local',
+          role: 'Admin' as const
+        }
+
+        if (asgardeo && asgardeo.getDecodedIdToken) {
+          try {
+            const token = await asgardeo.getDecodedIdToken()
+            if (token) {
+              const email = token.email || token.username || 'user@invox.local'
+              const name = token.given_name ? `${token.given_name} ${token.family_name || ''}`.trim() : email.split('@')[0]
+              const role = token.roles?.includes('Invox_accountant')
+                ? 'Accountant'
+                : token.roles?.includes('Invox_viewer')
+                  ? 'Viewer'
+                  : 'Admin'
+              authenticatedUser = { name, email, role: role as any }
+            }
+          } catch {}
+        }
+
+        login(authenticatedUser)
 
         await refreshTenants()
         if (isMounted) setStatus('Authentication confirmed. Redirecting to workspace...')
@@ -62,7 +80,7 @@ export function AuthCallback() {
           }
         }, 300)
       } catch {
-        navigate(`/${'horizon'}/dashboard`, { replace: true })
+        navigate('/horizon/dashboard', { replace: true })
       }
     }
 

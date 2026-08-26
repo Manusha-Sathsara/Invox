@@ -29,12 +29,12 @@ export function AppLayout() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false)
 
-  // Auth guard — redirect to /login with return URL
+  // Auth guard — redirect to landing page if unauthenticated
   useEffect(() => {
     if (!isAuthenticated) {
-      navigate(`/login?next=${encodeURIComponent(location.pathname)}`, { replace: true })
+      navigate('/', { replace: true })
     }
-  }, [isAuthenticated, location.pathname, navigate])
+  }, [isAuthenticated, navigate])
 
   // Sync tenant from URL slug
   useEffect(() => {
