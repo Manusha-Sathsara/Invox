@@ -99,9 +99,9 @@ export function AuthCallback() {
 
         // Fetch real registered profile from backend database
         let userRole: 'Admin' | 'Accountant' | 'Viewer' = 'Admin'
-        if (userRoles.includes('Invox_accountant')) {
+        if (userRoles.some(r => /accountant/i.test(r))) {
           userRole = 'Accountant'
-        } else if (userRoles.includes('Invox_viewer')) {
+        } else if (userRoles.some(r => /viewer/i.test(r))) {
           userRole = 'Viewer'
         }
 
