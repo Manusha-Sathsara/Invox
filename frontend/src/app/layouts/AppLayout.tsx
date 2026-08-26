@@ -29,12 +29,14 @@ export function AppLayout() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false)
 
+  const isAuth = isAuthenticated || (typeof window !== 'undefined' && localStorage.getItem('invox_auth') === 'true')
+
   // Auth guard — redirect to landing page if unauthenticated
   useEffect(() => {
-    if (!isAuthenticated) {
+    if (!isAuth) {
       navigate('/', { replace: true })
     }
-  }, [isAuthenticated, navigate])
+  }, [isAuth, navigate])
 
   // Sync tenant from URL slug
   useEffect(() => {
@@ -47,7 +49,7 @@ export function AppLayout() {
     setMobileSidebarOpen(false)
   }, [location.pathname])
 
-  if (!isAuthenticated) return null
+  if (!isAuth) return null
 
   const currentView = viewFromPath(location.pathname)
 

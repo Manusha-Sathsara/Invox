@@ -69,17 +69,21 @@ export function AuthCallback() {
           } catch {}
         }
 
-        login(authenticatedUser)
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('invox_auth', 'true')
+        }
 
+        login(authenticatedUser)
         await refreshTenants()
-        if (isMounted) setStatus('Authentication confirmed. Redirecting to workspace...')
-        
-        setTimeout(() => {
-          if (isMounted) {
-            navigate(`/${targetSlug}/dashboard`, { replace: true })
-          }
-        }, 300)
+
+        if (isMounted) {
+          setStatus('Authentication confirmed. Redirecting to workspace...')
+          navigate(`/${targetSlug}/dashboard`, { replace: true })
+        }
       } catch {
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('invox_auth', 'true')
+        }
         navigate('/horizon/dashboard', { replace: true })
       }
     }
