@@ -41,6 +41,10 @@ public class SecurityConfig {
                     "/api/v1/tenants/public-list",
                     "/api/v1/tenants/check-subdomain/**",
                     "/api/v1/tenants/by-subdomain/**",
+                    "/api/v1/tenants/my-tenants",
+                    "/api/v1/tenants/profile",
+                    "/api/v1/tenants/users/**",
+                    "/api/v1/tenants/me",
                     "/api/v1/tenants/*",
                     "/actuator/health",
                     "/actuator/info"

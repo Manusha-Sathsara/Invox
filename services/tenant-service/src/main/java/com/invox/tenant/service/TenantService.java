@@ -121,11 +121,15 @@ public class TenantService {
         }
 
         // 1. Send invite / provision user in Asgardeo Sub-Organization
-        asgardeoClient.inviteEmployeeToSubOrg(
-                tenant.getAsgardeoOrgId(),
-                request.getEmail(),
-                request.getRole().name()
-        );
+        try {
+            asgardeoClient.inviteEmployeeToSubOrg(
+                    tenant.getAsgardeoOrgId(),
+                    request.getEmail().trim().toLowerCase(),
+                    request.getRole().name()
+            );
+        } catch (Exception e) {
+            log.warn("Asgardeo invitation notification: {}", e.getMessage());
+        }
 
         // 2. Save in database
         TenantUser user = TenantUser.builder()
