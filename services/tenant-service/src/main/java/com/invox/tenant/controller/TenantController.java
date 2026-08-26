@@ -36,6 +36,24 @@ public class TenantController {
     }
 
     /**
+     * User-specific endpoint: Get only the tenant workspaces that belong to the user
+     */
+    @GetMapping("/my-tenants")
+    public ResponseEntity<List<TenantResponse>> getMyTenants(@RequestParam(required = false) String email) {
+        return ResponseEntity.ok(tenantService.getTenantsForUser(email));
+    }
+
+    /**
+     * User-specific endpoint: Get real user profile by email and active tenant
+     */
+    @GetMapping("/profile")
+    public ResponseEntity<TenantUserDto> getUserProfile(
+            @RequestParam String email,
+            @RequestParam(required = false) String tenant) {
+        return ResponseEntity.ok(tenantService.resolveUserProfile(email, tenant));
+    }
+
+    /**
      * Public helper endpoint: Delete a tenant and its sub-organization
      */
     @DeleteMapping("/{id}")

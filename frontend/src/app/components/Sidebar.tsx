@@ -8,8 +8,8 @@ import {
   ChevronLeft, ChevronRight, LogOut,
 } from 'lucide-react'
 import { useApp } from '../context/AppContext'
-import { TENANTS, APP_USERS } from '../App'
-import type { ViewType } from '../App'
+import { APP_USERS } from '../App'
+import type { ViewType, Tenant } from '../App'
 
 interface SidebarProps {
   currentView: ViewType
@@ -83,7 +83,7 @@ export function Sidebar({ currentView, collapsed, onCollapsedChange, mobileOpen 
     navigate(`/${currentTenant.slug}/${view}`)
   }
 
-  const handleTenantSwitch = (tenant: typeof TENANTS[0]) => {
+  const handleTenantSwitch = (tenant: Tenant) => {
     setCurrentTenant(tenant)
     setTenantDropOpen(false)
     navigate(`/${tenant.slug}/dashboard`)
@@ -92,7 +92,6 @@ export function Sidebar({ currentView, collapsed, onCollapsedChange, mobileOpen 
   const handleLogout = () => {
     setUserMenuOpen(false)
     logout()
-    navigate('/')
   }
 
   const sidebarBase = `
@@ -170,12 +169,12 @@ export function Sidebar({ currentView, collapsed, onCollapsedChange, mobileOpen 
                   : 'bg-black/[0.03] hover:bg-black/[0.06] border-black/[0.06] text-slate-800'
               }`}
             >
-              <div className="w-7 h-7 rounded-lg flex items-center justify-center text-white flex-shrink-0 shadow" style={{ background: currentTenant.color, fontSize: '11px', fontWeight: 700 }}>
-                {currentTenant.initials}
+              <div className="w-7 h-7 rounded-lg flex items-center justify-center text-white flex-shrink-0 shadow" style={{ background: currentTenant?.color || '#6366f1', fontSize: '11px', fontWeight: 700 }}>
+                {currentTenant?.initials || 'WK'}
               </div>
               <div className="flex-1 text-left min-w-0">
-                <p className="text-sm truncate" style={{ fontWeight: 600 }}>{currentTenant.name}</p>
-                <p className={`text-[11px] ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>{currentTenant.plan} Plan</p>
+                <p className="text-sm truncate" style={{ fontWeight: 600 }}>{currentTenant?.name || 'Workspace'}</p>
+                <p className={`text-[11px] ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>{currentTenant?.plan || 'Free'} Plan</p>
               </div>
               <ChevronDown size={14} className={`transition-transform flex-shrink-0 ${isDark ? 'text-slate-400' : 'text-slate-500'} ${tenantDropOpen ? 'rotate-180' : ''}`} />
             </button>
@@ -306,7 +305,7 @@ export function Sidebar({ currentView, collapsed, onCollapsedChange, mobileOpen 
                     <p className="text-sm" style={{ fontWeight: 500 }}>{tenant.name}</p>
                     <p className={`text-[11px] ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>{tenant.plan}</p>
                   </div>
-                  {currentTenant.id === tenant.id && <Check size={14} className="text-indigo-500" />}
+                  {currentTenant?.id === tenant.id && <Check size={14} className="text-indigo-500" />}
                 </button>
               ))}
               <div className={`border-t mx-1 my-1 ${isDark ? 'border-white/[0.06]' : 'border-black/[0.05]'}`} />

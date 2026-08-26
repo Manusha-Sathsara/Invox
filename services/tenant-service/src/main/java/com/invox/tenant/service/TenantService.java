@@ -282,6 +282,84 @@ public class TenantService {
         });
     }
 
+    @Transactional(readOnly = true)
+    public List<TenantResponse> getTenantsForUser(String email) {
+        if (email == null || email.isBlank()) {
+            return List.of();
+        }
+        String cleanEmail = email.trim().toLowerCase();
+
+        List<Tenant> adminTenants = tenantRepository.findAll().stream()
+                .filter(t -> t.getAdminEmail() != null && t.getAdminEmail().equalsIgnoreCase(cleanEmail))
+                .toList();
+
+        List<Tenant> memberTenants = tenantUserRepository.findAll().stream()
+                .filter(u -> u.getEmail() != null && u.getEmail().equalsIgnoreCase(cleanEmail))
+                .map(TenantUser::getTenant)
+                .filter(java.util.Objects::nonNull)
+                .toList();
+
+        return java.util.stream.Stream.concat(adminTenants.stream(), memberTenants.stream())
+                .distinct()
+                .map(this::toResponse)
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public TenantUserDto resolveUserProfile(String email, String tenantSlug) {
+        if (email == null || email.isBlank()) {
+            throw new IllegalArgumentException("Email is required");
+        }
+        String cleanEmail = email.trim().toLowerCase();
+
+        var userOpt = tenantUserRepository.findByEmailIgnoreCase(cleanEmail);
+        if (userOpt.isPresent()) {
+            return toUserDto(userOpt.get());
+        }
+
+        var tenantOpt = tenantRepository.findByAdminEmailIgnoreCase(cleanEmail);
+        if (tenantOpt.isPresent()) {
+            Tenant t = tenantOpt.get();
+            return TenantUserDto.builder()
+                    .id(t.getId())
+                    .email(cleanEmail)
+                    .firstName(t.getCompanyName().split(" ")[0])
+                    .lastName("Admin")
+                    .role(UserRole.ADMINISTRATOR)
+                    .active(true)
+                    .createdAt(t.getCreatedAt())
+                    .build();
+        }
+
+        String namePart = cleanEmail.split("@")[0].replace(".", " ").replace("_", " ");
+        String[] parts = namePart.split(" ");
+        String first = parts.length > 0 ? parts[0] : "Admin";
+        String last = parts.length > 1 ? parts[1] : "";
+        return TenantUserDto.builder()
+                .id(java.util.UUID.randomUUID())
+                .email(cleanEmail)
+                .firstName(first.substring(0, 1).toUpperCase() + (first.length() > 1 ? first.substring(1) : ""))
+                .lastName(last.isEmpty() ? "" : last.substring(0, 1).toUpperCase() + (last.length() > 1 ? last.substring(1) : ""))
+                .role(UserRole.ADMINISTRATOR)
+                .active(true)
+                .createdAt(java.time.LocalDateTime.now())
+                .build();
+    }
+
+    private TenantResponse toResponse(Tenant tenant) {
+        return TenantResponse.builder()
+                .id(tenant.getId())
+                .companyName(tenant.getCompanyName())
+                .subdomain(tenant.getSubdomain())
+                .asgardeoOrgId(tenant.getAsgardeoOrgId())
+                .asgardeoOrgHandle(tenant.getAsgardeoOrgHandle())
+                .status(tenant.getStatus())
+                .plan(tenant.getPlan())
+                .adminEmail(tenant.getAdminEmail())
+                .createdAt(tenant.getCreatedAt())
+                .build();
+    }
+
     public boolean isSubdomainAvailable(String subdomain) {
         return !tenantRepository.existsBySubdomainIgnoreCase(subdomain.trim());
     }

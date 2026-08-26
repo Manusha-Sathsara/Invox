@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'motion/react'
 import { useApp } from '../context/AppContext'
 import { Sidebar } from '../components/Sidebar'
 import { TopBar } from '../components/TopBar'
-import { TENANTS } from '../App'
+import { Building2, Plus, LogOut } from 'lucide-react'
 import type { ViewType } from '../App'
 
 function viewFromPath(pathname: string): ViewType {
@@ -22,7 +22,7 @@ function viewFromPath(pathname: string): ViewType {
 }
 
 export function AppLayout() {
-  const { isAuthenticated, currentTenant, setCurrentTenant } = useApp()
+  const { isAuthenticated, tenants, currentTenant, setCurrentTenant, currentUser, logout, isDark } = useApp()
   const navigate = useNavigate()
   const location = useLocation()
   const { tenant: tenantSlug } = useParams()
@@ -38,11 +38,20 @@ export function AppLayout() {
     }
   }, [isAuth, navigate])
 
-  // Sync tenant from URL slug
+  // Tenant authorization & URL synchronization guard
   useEffect(() => {
-    const found = TENANTS.find(t => t.slug === tenantSlug)
-    if (found && found.id !== currentTenant.id) setCurrentTenant(found)
-  }, [tenantSlug])
+    if (!isAuth || tenants.length === 0) return
+
+    const authorizedTenant = tenants.find(t => t.slug.toLowerCase() === tenantSlug?.toLowerCase())
+    if (authorizedTenant) {
+      if (!currentTenant || currentTenant.id !== authorizedTenant.id) {
+        setCurrentTenant(authorizedTenant)
+      }
+    } else {
+      // User is NOT a member of this tenant! Route to their authorized workspace
+      navigate(`/${tenants[0].slug}/dashboard`, { replace: true })
+    }
+  }, [isAuth, tenantSlug, tenants, currentTenant, navigate, setCurrentTenant])
 
   // Close mobile sidebar on route change
   useEffect(() => {
@@ -50,6 +59,51 @@ export function AppLayout() {
   }, [location.pathname])
 
   if (!isAuth) return null
+
+  // If user is authenticated but has no organizations registered
+  if (tenants.length === 0 && !currentTenant) {
+    return (
+      <div className={`min-h-screen flex items-center justify-center p-4 ${isDark ? 'bg-slate-950 text-white' : 'bg-slate-50 text-slate-900'}`}>
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className={`w-full max-w-md p-8 rounded-3xl text-center border shadow-2xl ${
+            isDark ? 'bg-white/[0.04] border-white/[0.08]' : 'bg-white border-black/[0.08]'
+          }`}
+        >
+          <div className="w-16 h-16 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center mx-auto mb-5 text-indigo-400">
+            <Building2 size={32} />
+          </div>
+          <h2 className="text-xl font-bold mb-2">No Workspace Found</h2>
+          <p className={`text-xs mb-2 ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
+            Signed in as <span className="font-semibold text-indigo-400">{currentUser.email || 'your account'}</span>
+          </p>
+          <p className={`text-xs mb-6 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+            Your account is not associated with any organization workspace yet. Register a new company workspace or ask your organization administrator to invite you.
+          </p>
+          <div className="space-y-3">
+            <button
+              onClick={() => navigate('/register')}
+              className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-xs font-semibold text-white shadow-lg shadow-indigo-500/25"
+              style={{ background: 'linear-gradient(135deg, #6366f1, #8b5cf6)' }}
+            >
+              <Plus size={16} />
+              Create Organization Workspace
+            </button>
+            <button
+              onClick={logout}
+              className={`w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-semibold ${
+                isDark ? 'text-slate-400 hover:bg-white/5' : 'text-slate-600 hover:bg-black/5'
+              }`}
+            >
+              <LogOut size={14} />
+              Sign Out & Switch Account
+            </button>
+          </div>
+        </motion.div>
+      </div>
+    )
+  }
 
   const currentView = viewFromPath(location.pathname)
 
@@ -98,6 +152,7 @@ export function AppLayout() {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -8 }}
               transition={{ duration: 0.22, ease: 'easeOut' }}
+              className="h-full"
             >
               <Outlet />
             </motion.div>

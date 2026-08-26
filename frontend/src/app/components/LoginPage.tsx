@@ -3,11 +3,25 @@ import { motion } from 'motion/react'
 import { Zap, Loader2, ShieldCheck } from 'lucide-react'
 import { asgardeoConfig } from '../config/asgardeoConfig'
 
+import { createPkceChallenge } from '../utils/pkce'
+
 export function LoginPage() {
   useEffect(() => {
-    const redirectUri = encodeURIComponent(asgardeoConfig.signInRedirectURL)
-    const authUrl = `${asgardeoConfig.baseUrl}/oauth2/authorize?client_id=${asgardeoConfig.clientID}&response_type=code&scope=${encodeURIComponent(asgardeoConfig.scope.join(' '))}&redirect_uri=${redirectUri}`
-    window.location.href = authUrl
+    async function startAuth() {
+      try {
+        const { verifier, challenge } = await createPkceChallenge()
+        if (typeof window !== 'undefined') {
+          sessionStorage.setItem('pkce_verifier', verifier)
+        }
+        const redirectUri = encodeURIComponent(asgardeoConfig.signInRedirectURL)
+        const authUrl = `${asgardeoConfig.baseUrl}/oauth2/authorize?client_id=${asgardeoConfig.clientID}&response_type=code&scope=${encodeURIComponent(asgardeoConfig.scope.join(' '))}&redirect_uri=${redirectUri}&code_challenge=${challenge}&code_challenge_method=S256&prompt=login`
+        window.location.href = authUrl
+      } catch {
+        const redirectUri = encodeURIComponent(asgardeoConfig.signInRedirectURL)
+        window.location.href = `${asgardeoConfig.baseUrl}/oauth2/authorize?client_id=${asgardeoConfig.clientID}&response_type=code&scope=${encodeURIComponent(asgardeoConfig.scope.join(' '))}&redirect_uri=${redirectUri}&prompt=login`
+      }
+    }
+    startAuth()
   }, [])
 
   return (

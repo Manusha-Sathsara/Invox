@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react'
 import { useAsgardeo } from '@asgardeo/react'
-import { TENANTS, APP_USERS } from '../App'
+import { APP_USERS } from '../App'
 import type { Tenant, AppUser, UserRole } from '../App'
 import { tenantApi, type TenantResponse } from '../services/tenantApi'
 
@@ -12,10 +12,10 @@ interface AppContextValue {
   logout: () => void
   currentUser: AppUser
   setCurrentUser: (u: AppUser) => void
-  currentTenant: Tenant
-  setCurrentTenant: (t: Tenant) => void
+  currentTenant: Tenant | null
+  setCurrentTenant: (t: Tenant | null) => void
   tenants: Tenant[]
-  refreshTenants: () => Promise<void>
+  refreshTenants: (emailOverride?: string) => Promise<void>
   asgardeoToken: string | null
   setAsgardeoToken: (t: string | null) => void
   asgardeo: any
@@ -109,14 +109,22 @@ export function AppProvider({ children }: { children: ReactNode }) {
       initials: 'GU'
     }
   })
-  const [tenants, setTenants] = useState<Tenant[]>(TENANTS)
-  const [currentTenant, setCurrentTenant] = useState<Tenant>(TENANTS[0])
+  const [tenants, setTenants] = useState<Tenant[]>([])
+  const [currentTenant, setCurrentTenant] = useState<Tenant | null>(null)
 
-  const refreshTenants = async () => {
+  const refreshTenants = async (emailOverride?: string) => {
     try {
-      const publicList = await tenantApi.getPublicTenants()
-      if (publicList && publicList.length > 0) {
-        const mapped: Tenant[] = publicList.map((t: TenantResponse, idx: number) => ({
+      const email = emailOverride || (currentUser.email && !currentUser.email.includes('@invox.local') ? currentUser.email : undefined)
+      if (!email) {
+        setTenants([])
+        setCurrentTenant(null)
+        return
+      }
+
+      const list = await tenantApi.getMyTenants(email)
+
+      if (list && list.length > 0) {
+        const mapped: Tenant[] = list.map((t: TenantResponse, idx: number) => ({
           id: t.id,
           name: t.companyName,
           plan: t.plan || 'Free Tier',
@@ -125,18 +133,22 @@ export function AppProvider({ children }: { children: ReactNode }) {
           slug: t.subdomain || t.asgardeoOrgHandle || t.companyName.toLowerCase().replace(/\s+/g, '-'),
         }))
         setTenants(mapped)
-        if (!mapped.some((m: Tenant) => m.slug === currentTenant.slug)) {
-          setCurrentTenant(mapped[0])
-        }
+        setCurrentTenant(mapped[0])
+      } else {
+        setTenants([])
+        setCurrentTenant(null)
       }
     } catch {
-      // Keep static defaults on network fallback
+      setTenants([])
+      setCurrentTenant(null)
     }
   }
 
   useEffect(() => {
-    refreshTenants()
-  }, [])
+    if (currentUser.email) {
+      refreshTenants(currentUser.email)
+    }
+  }, [currentUser.email])
 
   // Synchronize authenticated state with Asgardeo SDK
   useEffect(() => {
@@ -149,6 +161,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
           const userObj = resolveUserFromToken(token)
           setCurrentUser(userObj)
           localStorage.setItem('invox_user', JSON.stringify(userObj))
+          if (userObj.email) {
+            refreshTenants(userObj.email)
+          }
         }
       }).catch(() => {})
     }

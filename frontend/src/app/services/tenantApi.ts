@@ -103,6 +103,28 @@ export const tenantApi = {
     }
   },
 
+  async getMyTenants(email?: string): Promise<TenantResponse[]> {
+    if (!email) return [];
+    try {
+      const res = await fetch(`${API_BASE_URL}/tenants/my-tenants?email=${encodeURIComponent(email.trim().toLowerCase())}`);
+      if (!res.ok) return [];
+      return res.json();
+    } catch {
+      return [];
+    }
+  },
+
+  async getUserProfile(email: string, tenant?: string): Promise<TenantUserResponse | null> {
+    if (!email) return null;
+    try {
+      const res = await fetch(`${API_BASE_URL}/tenants/profile?email=${encodeURIComponent(email.trim().toLowerCase())}${tenant ? `&tenant=${encodeURIComponent(tenant)}` : ''}`);
+      if (!res.ok) return null;
+      return res.json();
+    } catch {
+      return null;
+    }
+  },
+
   async inviteUser(payload: UserInvitePayload, token?: string, tenantId?: string): Promise<TenantUserResponse> {
     const headers: Record<string, string> = { 'Content-Type': 'application/json' };
     if (token) {

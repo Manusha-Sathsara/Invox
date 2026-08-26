@@ -9,6 +9,7 @@ import {
 } from 'lucide-react'
 import { useApp } from '../context/AppContext'
 import { asgardeoConfig } from '../config/asgardeoConfig'
+import { createPkceChallenge } from '../utils/pkce'
 
 function useInView(threshold = 0.12) {
   const ref = useRef<HTMLDivElement>(null)
@@ -77,10 +78,20 @@ export function LandingPage() {
   const [contactSent,    setContactSent]    = useState(false)
   const [contactLoading, setContactLoading] = useState(false)
 
-  const handleSignIn = () => {
-    const redirectUri = encodeURIComponent(asgardeoConfig.signInRedirectURL)
-    const authUrl = `${asgardeoConfig.baseUrl}/oauth2/authorize?client_id=${asgardeoConfig.clientID}&response_type=code&scope=${encodeURIComponent(asgardeoConfig.scope.join(' '))}&redirect_uri=${redirectUri}`
-    window.location.href = authUrl
+  const handleSignIn = async () => {
+    try {
+      const { verifier, challenge } = await createPkceChallenge()
+      if (typeof window !== 'undefined') {
+        sessionStorage.setItem('pkce_verifier', verifier)
+      }
+      const redirectUri = encodeURIComponent(asgardeoConfig.signInRedirectURL)
+      const authUrl = `${asgardeoConfig.baseUrl}/oauth2/authorize?client_id=${asgardeoConfig.clientID}&response_type=code&scope=${encodeURIComponent(asgardeoConfig.scope.join(' '))}&redirect_uri=${redirectUri}&code_challenge=${challenge}&code_challenge_method=S256&prompt=login`
+      window.location.href = authUrl
+    } catch (e) {
+      console.warn('PKCE generation error, fallback:', e)
+      const redirectUri = encodeURIComponent(asgardeoConfig.signInRedirectURL)
+      window.location.href = `${asgardeoConfig.baseUrl}/oauth2/authorize?client_id=${asgardeoConfig.clientID}&response_type=code&scope=${encodeURIComponent(asgardeoConfig.scope.join(' '))}&redirect_uri=${redirectUri}&prompt=login`
+    }
   }
 
   useEffect(() => {
