@@ -15,6 +15,9 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
+import org.springframework.security.oauth2.server.resource.web.BearerTokenResolver;
+import org.springframework.security.oauth2.server.resource.web.DefaultBearerTokenResolver;
+
 import java.util.List;
 
 @Configuration
@@ -26,6 +29,21 @@ public class SecurityConfig {
 
     public SecurityConfig(TenantContextFilter tenantContextFilter) {
         this.tenantContextFilter = tenantContextFilter;
+    }
+
+    @Bean
+    public BearerTokenResolver bearerTokenResolver() {
+        DefaultBearerTokenResolver resolver = new DefaultBearerTokenResolver();
+        resolver.setAllowFormEncodedBodyParameter(false);
+        resolver.setAllowUriQueryParameter(false);
+        return request -> {
+            String token = resolver.resolve(request);
+            // Only attempt strict JWT resource-server parsing if it has valid 3-part JWT structure
+            if (token != null && token.startsWith("ey") && token.contains(".")) {
+                return token;
+            }
+            return null;
+        };
     }
 
     @Bean
@@ -52,7 +70,10 @@ public class SecurityConfig {
                 // All other endpoints require valid JWT issued by Asgardeo
                 .anyRequest().authenticated()
             )
-            .oauth2ResourceServer(oauth2 -> oauth2.jwt(Customizer.withDefaults()))
+            .oauth2ResourceServer(oauth2 -> oauth2
+                .bearerTokenResolver(bearerTokenResolver())
+                .jwt(Customizer.withDefaults())
+            )
             .addFilterAfter(tenantContextFilter, BearerTokenAuthenticationFilter.class);
 
         return http.build();

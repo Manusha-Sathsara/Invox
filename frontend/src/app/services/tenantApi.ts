@@ -126,12 +126,14 @@ export const tenantApi = {
   },
 
   async inviteUser(payload: UserInvitePayload, token?: string, tenantId?: string): Promise<TenantUserResponse> {
+    const activeToken = token || localStorage.getItem('invox_id_token') || localStorage.getItem('invox_token') || undefined;
+    const activeTenant = tenantId || 'horizon';
     const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
+    if (activeToken) {
+      headers['Authorization'] = `Bearer ${activeToken}`;
     }
-    if (tenantId) {
-      headers['X-Tenant-Id'] = tenantId;
+    if (activeTenant) {
+      headers['X-Tenant-Id'] = activeTenant;
     }
 
     const res = await fetch(`${API_BASE_URL}/tenants/users/invite`, {
@@ -155,12 +157,14 @@ export const tenantApi = {
   },
 
   async getTenantUsers(token?: string, tenantId?: string): Promise<TenantUserResponse[]> {
+    const activeToken = token || localStorage.getItem('invox_id_token') || localStorage.getItem('invox_token') || undefined;
+    const activeTenant = tenantId || 'horizon';
     const headers: Record<string, string> = {};
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
+    if (activeToken) {
+      headers['Authorization'] = `Bearer ${activeToken}`;
     }
-    if (tenantId) {
-      headers['X-Tenant-Id'] = tenantId;
+    if (activeTenant) {
+      headers['X-Tenant-Id'] = activeTenant;
     }
 
     try {
@@ -173,12 +177,14 @@ export const tenantApi = {
   },
 
   async updateUser(userId: string, payload: UserUpdatePayload, token?: string, tenantId?: string): Promise<TenantUserResponse> {
+    const activeToken = token || localStorage.getItem('invox_id_token') || localStorage.getItem('invox_token') || undefined;
+    const activeTenant = tenantId || 'horizon';
     const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
+    if (activeToken) {
+      headers['Authorization'] = `Bearer ${activeToken}`;
     }
-    if (tenantId) {
-      headers['X-Tenant-Id'] = tenantId;
+    if (activeTenant) {
+      headers['X-Tenant-Id'] = activeTenant;
     }
 
     const res = await fetch(`${API_BASE_URL}/tenants/users/${userId}`, {
@@ -194,12 +200,14 @@ export const tenantApi = {
   },
 
   async toggleUserStatus(userId: string, active: boolean, token?: string, tenantId?: string): Promise<TenantUserResponse> {
+    const activeToken = token || localStorage.getItem('invox_id_token') || localStorage.getItem('invox_token') || undefined;
+    const activeTenant = tenantId || 'horizon';
     const headers: Record<string, string> = {};
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
+    if (activeToken) {
+      headers['Authorization'] = `Bearer ${activeToken}`;
     }
-    if (tenantId) {
-      headers['X-Tenant-Id'] = tenantId;
+    if (activeTenant) {
+      headers['X-Tenant-Id'] = activeTenant;
     }
 
     const res = await fetch(`${API_BASE_URL}/tenants/users/${userId}/status?active=${active}`, {
@@ -214,12 +222,14 @@ export const tenantApi = {
   },
 
   async removeUser(userId: string, token?: string, tenantId?: string): Promise<void> {
+    const activeToken = token || localStorage.getItem('invox_id_token') || localStorage.getItem('invox_token') || undefined;
+    const activeTenant = tenantId || 'horizon';
     const headers: Record<string, string> = {};
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
+    if (activeToken) {
+      headers['Authorization'] = `Bearer ${activeToken}`;
     }
-    if (tenantId) {
-      headers['X-Tenant-Id'] = tenantId;
+    if (activeTenant) {
+      headers['X-Tenant-Id'] = activeTenant;
     }
 
     const res = await fetch(`${API_BASE_URL}/tenants/users/${userId}`, {
