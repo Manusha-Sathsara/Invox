@@ -46,11 +46,21 @@ export interface TenantUserResponse {
   createdAt?: string;
 }
 
+function buildUrl(path: string): string {
+  const normalizedBase = API_BASE_URL.replace(/\/+$/, '');
+  const cleanPath = path.startsWith('/') ? path : `/${path}`;
+  if (normalizedBase.includes('/tenants')) {
+    const strippedPath = cleanPath.replace(/^\/tenants/, '');
+    return `${normalizedBase}${strippedPath}`;
+  }
+  return `${normalizedBase}${cleanPath}`;
+}
+
 export const tenantApi = {
   async checkSubdomain(subdomain: string): Promise<boolean> {
     if (!subdomain || subdomain.trim().length === 0) return false;
     try {
-      const res = await fetch(`${API_BASE_URL}/tenants/check-subdomain/${encodeURIComponent(subdomain.trim().toLowerCase())}`);
+      const res = await fetch(buildUrl(`/tenants/check-subdomain/${encodeURIComponent(subdomain.trim().toLowerCase())}`));
       if (!res.ok) return false;
       const data = await res.json();
       return Boolean(data.available);
@@ -60,7 +70,7 @@ export const tenantApi = {
   },
 
   async registerTenant(payload: TenantRegisterPayload): Promise<TenantResponse> {
-    const res = await fetch(`${API_BASE_URL}/tenants/register`, {
+    const res = await fetch(buildUrl('/tenants/register'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -85,7 +95,7 @@ export const tenantApi = {
 
   async getTenantBySubdomain(subdomain: string): Promise<TenantResponse | null> {
     try {
-      const res = await fetch(`${API_BASE_URL}/tenants/by-subdomain/${encodeURIComponent(subdomain.trim().toLowerCase())}`);
+      const res = await fetch(buildUrl(`/tenants/by-subdomain/${encodeURIComponent(subdomain.trim().toLowerCase())}`));
       if (!res.ok) return null;
       return res.json();
     } catch {
@@ -95,7 +105,7 @@ export const tenantApi = {
 
   async getPublicTenants(): Promise<TenantResponse[]> {
     try {
-      const res = await fetch(`${API_BASE_URL}/tenants/public-list`);
+      const res = await fetch(buildUrl('/tenants/public-list'));
       if (!res.ok) return [];
       return res.json();
     } catch {
@@ -106,7 +116,7 @@ export const tenantApi = {
   async getMyTenants(email?: string): Promise<TenantResponse[]> {
     if (!email) return [];
     try {
-      const res = await fetch(`${API_BASE_URL}/tenants/my-tenants?email=${encodeURIComponent(email.trim().toLowerCase())}`);
+      const res = await fetch(buildUrl(`/tenants/my-tenants?email=${encodeURIComponent(email.trim().toLowerCase())}`));
       if (!res.ok) return [];
       return res.json();
     } catch {
@@ -117,7 +127,7 @@ export const tenantApi = {
   async getUserProfile(email: string, tenant?: string): Promise<TenantUserResponse | null> {
     if (!email) return null;
     try {
-      const res = await fetch(`${API_BASE_URL}/tenants/profile?email=${encodeURIComponent(email.trim().toLowerCase())}${tenant ? `&tenant=${encodeURIComponent(tenant)}` : ''}`);
+      const res = await fetch(buildUrl(`/tenants/profile?email=${encodeURIComponent(email.trim().toLowerCase())}${tenant ? `&tenant=${encodeURIComponent(tenant)}` : ''}`));
       if (!res.ok) return null;
       return res.json();
     } catch {
@@ -136,7 +146,7 @@ export const tenantApi = {
       headers['X-Tenant-Id'] = activeTenant;
     }
 
-    const res = await fetch(`${API_BASE_URL}/tenants/users/invite`, {
+    const res = await fetch(buildUrl('/tenants/users/invite'), {
       method: 'POST',
       headers,
       body: JSON.stringify(payload),
@@ -168,7 +178,7 @@ export const tenantApi = {
     }
 
     try {
-      const res = await fetch(`${API_BASE_URL}/tenants/users`, { headers });
+      const res = await fetch(buildUrl('/tenants/users'), { headers });
       if (!res.ok) return [];
       return res.json();
     } catch {
@@ -187,7 +197,7 @@ export const tenantApi = {
       headers['X-Tenant-Id'] = activeTenant;
     }
 
-    const res = await fetch(`${API_BASE_URL}/tenants/users/${userId}`, {
+    const res = await fetch(buildUrl(`/tenants/users/${userId}`), {
       method: 'PUT',
       headers,
       body: JSON.stringify(payload),
@@ -210,7 +220,7 @@ export const tenantApi = {
       headers['X-Tenant-Id'] = activeTenant;
     }
 
-    const res = await fetch(`${API_BASE_URL}/tenants/users/${userId}/status?active=${active}`, {
+    const res = await fetch(buildUrl(`/tenants/users/${userId}/status?active=${active}`), {
       method: 'PATCH',
       headers,
     });
@@ -232,7 +242,7 @@ export const tenantApi = {
       headers['X-Tenant-Id'] = activeTenant;
     }
 
-    const res = await fetch(`${API_BASE_URL}/tenants/users/${userId}`, {
+    const res = await fetch(buildUrl(`/tenants/users/${userId}`), {
       method: 'DELETE',
       headers,
     });

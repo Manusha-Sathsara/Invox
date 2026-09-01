@@ -6,4 +6,4 @@ export const asgardeoConfig = {
   scope: ["openid", "profile", "email", "roles", "groups"]
 };
 
-export const API_BASE_URL = "http://localhost:8081/api/v1";
+export const API_BASE_URL = "http://localhost:8280/api/v1/tenants/1.0.0";
