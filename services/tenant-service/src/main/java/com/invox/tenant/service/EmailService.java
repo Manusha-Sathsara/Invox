@@ -41,16 +41,19 @@ public class EmailService {
                     <h2 style='color: #0f172a; margin-top: 0; font-size: 22px; font-weight: 700;'>Your B2B Workspace is Ready!</h2>
                     <p style='color: #475569; font-size: 15px; line-height: 1.6;'>
                         Hello <strong>%s</strong>,<br><br>
-                        Congratulations! Your multi-tenant invoicing workspace for <strong>%s</strong> has been successfully provisioned.
+                        Your multi-tenant invoicing organization workspace for <strong>%s</strong> has been provisioned successfully.
                     </p>
                     <div style='background-color: #f8fafc; padding: 18px; border-radius: 14px; margin: 24px 0; border: 1px solid #e2e8f0;'>
                         <p style='margin: 6px 0; font-size: 13px; color: #64748b;'><strong>Company:</strong> %s</p>
                         <p style='margin: 6px 0; font-size: 13px; color: #64748b;'><strong>Workspace Domain:</strong> <span style='color: #6366f1; font-family: monospace; font-weight: bold;'>%s.invox.local</span></p>
                         <p style='margin: 6px 0; font-size: 13px; color: #64748b;'><strong>Assigned Role:</strong> <span style='background-color: #e0e7ff; color: #4338ca; padding: 2px 8px; border-radius: 6px; font-weight: 600; font-size: 11px;'>ADMINISTRATOR</span></p>
                     </div>
-                    <div style='text-align: center; margin: 32px 0;'>
+                    <p style='color: #475569; font-size: 14px; line-height: 1.6;'>
+                        To activate your account and establish your password, click the button below to access the sign-in portal:
+                    </p>
+                    <div style='text-align: center; margin: 28px 0;'>
                         <a href='%s' style='background: linear-gradient(135deg, #6366f1 0%%, #8b5cf6 100%%); color: #ffffff; padding: 14px 36px; border-radius: 12px; text-decoration: none; font-weight: bold; font-size: 15px; display: inline-block; box-shadow: 0 4px 14px rgba(99, 102, 241, 0.35);'>
-                            Enter Your Workspace →
+                            Set Password & Sign In →
                         </a>
                     </div>
                     <hr style='border: none; border-top: 1px solid #f1f5f9; margin: 24px 0;' />
