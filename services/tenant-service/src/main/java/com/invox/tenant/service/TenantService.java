@@ -26,6 +26,7 @@ public class TenantService {
     private final TenantRepository tenantRepository;
     private final TenantUserRepository tenantUserRepository;
     private final AsgardeoClient asgardeoClient;
+    private final EmailService emailService;
 
     /**
      * Self-service Tenant registration flow (B2B Organization creation)
@@ -86,6 +87,14 @@ public class TenantService {
 
         tenantUserRepository.save(adminUser);
 
+        // 6. Send live Workspace Activation Email directly to Admin's Inbox
+        emailService.sendWorkspaceActivationEmail(
+                request.getAdminEmail(),
+                request.getAdminFirstName(),
+                request.getCompanyName(),
+                cleanSubdomain
+        );
+
         log.info("Tenant '{}' registered successfully with ID {}", tenant.getCompanyName(), tenant.getId());
 
         String loginUrl = String.format("http://localhost:5173/login?org=%s", cleanSubdomain);
@@ -137,6 +146,15 @@ public class TenantService {
                 .build();
 
         user = tenantUserRepository.save(user);
+
+        // 3. Send live Team Invitation Email directly to Invitee's Inbox
+        emailService.sendTeamInvitationEmail(
+                request.getEmail(),
+                request.getFirstName(),
+                tenant.getCompanyName(),
+                tenant.getSubdomain(),
+                request.getRole().name()
+        );
 
         return toUserDto(user);
     }
