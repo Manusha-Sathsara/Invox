@@ -56,14 +56,9 @@ public class TenantService {
         // 2. Share SPA application with this new sub-organization
         asgardeoClient.shareAppWithSubOrg(asgardeoOrgId);
 
-        // 3. Provision Initial Administrator User in the Sub-Organization
-        String asgardeoUserId = asgardeoClient.createAdminUserInSubOrg(
-                asgardeoOrgId,
-                request.getAdminEmail(),
-                request.getAdminFirstName(),
-                request.getAdminLastName(),
-                request.getAdminPassword()
-        );
+        // 3. Dispatch Initial Administrator Invitation & Setup in the Sub-Organization
+        asgardeoClient.inviteEmployeeToSubOrg(asgardeoOrgId, request.getAdminEmail(), "Administrator");
+        String asgardeoUserId = "invited_admin";
 
         // 4. Save Tenant entity in PostgreSQL
         Tenant tenant = Tenant.builder()
@@ -294,17 +289,24 @@ public class TenantService {
         String cleanEmail = email.trim().toLowerCase();
 
         List<Tenant> adminTenants = tenantRepository.findAll().stream()
-                .filter(t -> t.getAdminEmail() != null && t.getAdminEmail().equalsIgnoreCase(cleanEmail))
+                .filter(t -> t != null && t.getAdminEmail() != null && t.getAdminEmail().equalsIgnoreCase(cleanEmail))
                 .toList();
 
         List<Tenant> memberTenants = tenantUserRepository.findAll().stream()
-                .filter(u -> u.getEmail() != null && u.getEmail().equalsIgnoreCase(cleanEmail))
+                .filter(u -> u != null && u.getEmail() != null && u.getEmail().equalsIgnoreCase(cleanEmail))
                 .map(TenantUser::getTenant)
                 .filter(java.util.Objects::nonNull)
                 .toList();
 
-        return java.util.stream.Stream.concat(adminTenants.stream(), memberTenants.stream())
-                .distinct()
+        var combined = java.util.stream.Stream.concat(adminTenants.stream(), memberTenants.stream())
+                .collect(java.util.stream.Collectors.toMap(
+                        Tenant::getId,
+                        t -> t,
+                        (existing, replacement) -> existing
+                ))
+                .values();
+
+        return combined.stream()
                 .map(this::toResponse)
                 .toList();
     }

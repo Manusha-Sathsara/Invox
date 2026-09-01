@@ -113,10 +113,15 @@ export const tenantApi = {
     }
   },
 
-  async getMyTenants(email?: string): Promise<TenantResponse[]> {
+  async getMyTenants(email?: string, token?: string): Promise<TenantResponse[]> {
     if (!email) return [];
+    const activeToken = token || (typeof window !== 'undefined' ? localStorage.getItem('invox_id_token') || localStorage.getItem('invox_token') : undefined);
+    const headers: Record<string, string> = {};
+    if (activeToken) {
+      headers['Authorization'] = `Bearer ${activeToken}`;
+    }
     try {
-      const res = await fetch(buildUrl(`/tenants/my-tenants?email=${encodeURIComponent(email.trim().toLowerCase())}`));
+      const res = await fetch(buildUrl(`/tenants/my-tenants?email=${encodeURIComponent(email.trim().toLowerCase())}`), { headers });
       if (!res.ok) return [];
       return res.json();
     } catch {
@@ -124,10 +129,15 @@ export const tenantApi = {
     }
   },
 
-  async getUserProfile(email: string, tenant?: string): Promise<TenantUserResponse | null> {
+  async getUserProfile(email: string, tenant?: string, token?: string): Promise<TenantUserResponse | null> {
     if (!email) return null;
+    const activeToken = token || (typeof window !== 'undefined' ? localStorage.getItem('invox_id_token') || localStorage.getItem('invox_token') : undefined);
+    const headers: Record<string, string> = {};
+    if (activeToken) {
+      headers['Authorization'] = `Bearer ${activeToken}`;
+    }
     try {
-      const res = await fetch(buildUrl(`/tenants/profile?email=${encodeURIComponent(email.trim().toLowerCase())}${tenant ? `&tenant=${encodeURIComponent(tenant)}` : ''}`));
+      const res = await fetch(buildUrl(`/tenants/profile?email=${encodeURIComponent(email.trim().toLowerCase())}${tenant ? `&tenant=${encodeURIComponent(tenant)}` : ''}`), { headers });
       if (!res.ok) return null;
       return res.json();
     } catch {

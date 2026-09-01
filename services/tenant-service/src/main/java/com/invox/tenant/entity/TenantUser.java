@@ -24,7 +24,7 @@ public class TenantUser {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "tenant_id", nullable = false)
     private Tenant tenant;
 

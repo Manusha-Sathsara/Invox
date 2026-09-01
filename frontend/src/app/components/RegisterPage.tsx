@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
 import { useNavigate } from 'react-router'
-import { Zap, Mail, Lock, Eye, EyeOff, User, Sun, Moon, ArrowRight, Building2, Globe, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react'
+import { Zap, Mail, User, Sun, Moon, ArrowRight, Building2, Globe, CheckCircle2, AlertCircle, Loader2, Send } from 'lucide-react'
 import { useApp } from '../context/AppContext'
 import { tenantApi } from '../services/tenantApi'
 
@@ -14,8 +14,6 @@ export function RegisterPage() {
   const [company, setCompany] = useState('')
   const [subdomain, setSubdomain] = useState('')
   const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [showPass, setShowPass] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [subdomainStatus, setSubdomainStatus] = useState<'idle' | 'checking' | 'available' | 'taken'>('idle')
@@ -50,16 +48,12 @@ export function RegisterPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!firstName || !company || !email || !password || !subdomain) {
+    if (!firstName || !company || !email || !subdomain) {
       setError('Please fill in all required fields.')
       return
     }
     if (subdomainStatus === 'taken') {
       setError('This subdomain is already taken. Please choose another one.')
-      return
-    }
-    if (password.length < 6) {
-      setError('Password must be at least 6 characters.')
       return
     }
 
@@ -73,7 +67,6 @@ export function RegisterPage() {
         adminEmail: email,
         adminFirstName: firstName,
         adminLastName: lastName || 'Admin',
-        adminPassword: password,
       })
 
       setRegistrationSuccess(response)
@@ -85,22 +78,25 @@ export function RegisterPage() {
     }
   }
 
-  const handleProceedToWorkspace = () => {
+  const handleProceedToWorkspace = async () => {
     if (!registrationSuccess) return
     const newSlug = registrationSuccess.subdomain || subdomain
-    login({
-      name: `${firstName} ${lastName}`.trim(),
-      email,
-      role: 'Admin',
-    })
-    setCurrentTenant({
+    const newTenantObj = {
       id: registrationSuccess.id || 'new',
       name: company,
       plan: 'Free Tier',
       initials: company.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2),
       color: '#6366f1',
       slug: newSlug,
+    }
+
+    login({
+      name: `${firstName} ${lastName}`.trim(),
+      email,
+      role: 'Admin',
     })
+    setCurrentTenant(newTenantObj)
+    await refreshTenants(email)
     navigate(`/${newSlug}/dashboard`, { replace: true })
   }
 
@@ -151,40 +147,46 @@ export function RegisterPage() {
               exit={{ opacity: 0, scale: 0.95 }}
               className="text-center py-4 space-y-4"
             >
-              <div className="w-16 h-16 rounded-3xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center mx-auto text-emerald-400 shadow-xl shadow-emerald-500/10">
-                <CheckCircle2 size={32} />
+              <div className="w-16 h-16 rounded-3xl bg-indigo-500/10 border border-indigo-500/30 flex items-center justify-center mx-auto text-indigo-400 shadow-xl shadow-indigo-500/10">
+                <Send size={28} />
               </div>
               <h2 className={`text-2xl ${isDark ? 'text-white' : 'text-slate-900'}`} style={{ fontWeight: 700 }}>
-                Organization Provisioned!
+                Activation Email Sent!
               </h2>
-              <p className={`text-sm ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
-                Your B2B workspace <strong>{registrationSuccess.companyName}</strong> has been created with Asgardeo IDP authentication.
+              <p className={`text-sm ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>
+                We've provisioned your B2B workspace <strong>{registrationSuccess.companyName}</strong> and sent an account setup invitation to <span className="font-semibold text-indigo-400">{registrationSuccess.adminEmail}</span>.
               </p>
 
-              <div className={`p-4 rounded-2xl border text-left text-xs space-y-1.5 ${isDark ? 'bg-white/[0.03] border-white/[0.06] text-slate-300' : 'bg-black/[0.02] border-black/[0.05] text-slate-700'}`}>
-                <div className="flex justify-between">
-                  <span className="text-slate-500">Subdomain:</span>
-                  <span className="font-mono font-bold text-indigo-400">{registrationSuccess.subdomain}.invox.local</span>
+              <div className={`p-4 rounded-2xl border text-left text-xs space-y-2 ${isDark ? 'bg-white/[0.03] border-white/[0.06] text-slate-300' : 'bg-black/[0.02] border-black/[0.05] text-slate-700'}`}>
+                <div className="flex items-center gap-2 text-indigo-400 font-semibold mb-1">
+                  <CheckCircle2 size={14} /> Next Steps to Activate:
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-500">Asgardeo Org ID:</span>
-                  <span className="font-mono text-slate-400 truncate max-w-[200px]">{registrationSuccess.asgardeoOrgId}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-500">Admin Account:</span>
-                  <span className="font-semibold">{registrationSuccess.adminEmail}</span>
+                <div className="pl-4 space-y-1 text-slate-400">
+                  <p>1. Check your email inbox from Asgardeo / INVOX.</p>
+                  <p>2. Click the verification link to create your password.</p>
+                  <p>3. Sign in to enter your new workspace.</p>
                 </div>
               </div>
 
-              <motion.button
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                onClick={handleProceedToWorkspace}
-                className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl text-sm text-white shadow-lg shadow-indigo-500/30"
-                style={{ background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)', fontWeight: 700 }}
-              >
-                Enter Organization Workspace <ArrowRight size={16} />
-              </motion.button>
+              <div className="space-y-2 pt-2">
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => navigate('/login')}
+                  className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl text-sm text-white shadow-lg shadow-indigo-500/30"
+                  style={{ background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)', fontWeight: 700 }}
+                >
+                  Proceed to Sign In <ArrowRight size={16} />
+                </motion.button>
+                <button
+                  onClick={handleProceedToWorkspace}
+                  className={`w-full py-2.5 rounded-xl text-xs font-semibold transition-colors ${
+                    isDark ? 'text-slate-400 hover:text-slate-200 hover:bg-white/5' : 'text-slate-600 hover:text-slate-800 hover:bg-black/5'
+                  }`}
+                >
+                  Directly Enter Workspace Preview
+                </button>
+              </div>
             </motion.div>
           ) : (
             <motion.div key="form" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
@@ -272,19 +274,9 @@ export function RegisterPage() {
                     <Mail size={14} className={`absolute left-3 top-1/2 -translate-y-1/2 ${isDark ? 'text-slate-500' : 'text-slate-400'}`} />
                     <input type="email" placeholder="alex@acmeglobal.com" value={email} onChange={e => setEmail(e.target.value)} className={`${inputClass} pl-9`} required />
                   </div>
-                </div>
-
-                <div>
-                  <label className={`text-xs mb-1 block ${isDark ? 'text-slate-400' : 'text-slate-600'}`} style={{ fontWeight: 600 }}>
-                    Password <span className="text-red-400">*</span>
-                  </label>
-                  <div className="relative">
-                    <Lock size={14} className={`absolute left-3 top-1/2 -translate-y-1/2 ${isDark ? 'text-slate-500' : 'text-slate-400'}`} />
-                    <input type={showPass ? 'text' : 'password'} placeholder="Min. 6 characters" value={password} onChange={e => setPassword(e.target.value)} className={`${inputClass} pl-9 pr-10`} required />
-                    <button type="button" onClick={() => setShowPass(!showPass)} className={`absolute right-3 top-1/2 -translate-y-1/2 p-0.5 transition-colors ${isDark ? 'text-slate-500 hover:text-slate-300' : 'text-slate-400 hover:text-slate-600'}`}>
-                      {showPass ? <EyeOff size={14} /> : <Eye size={14} />}
-                    </button>
-                  </div>
+                  <p className={`text-[11px] mt-1 ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
+                    An activation link to set your password will be sent to this email.
+                  </p>
                 </div>
 
                 {error && (
