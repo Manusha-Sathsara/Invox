@@ -1,6 +1,5 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react'
 import { useAsgardeo } from '@asgardeo/react'
-import { APP_USERS } from '../App'
 import type { Tenant, AppUser, UserRole } from '../App'
 import { tenantApi, type TenantResponse } from '../services/tenantApi'
 
@@ -15,10 +14,13 @@ interface AppContextValue {
   currentTenant: Tenant | null
   setCurrentTenant: (t: Tenant | null) => void
   tenants: Tenant[]
+  setTenants: (t: Tenant[]) => void
   refreshTenants: (emailOverride?: string) => Promise<void>
   asgardeoToken: string | null
   setAsgardeoToken: (t: string | null) => void
   asgardeo: any
+  getAccessToken: () => Promise<string>
+  getDecodedIdToken: () => Promise<any>
 }
 
 const AppContext = createContext<AppContextValue>(null!)
@@ -228,6 +230,29 @@ export function AppProvider({ children }: { children: ReactNode }) {
     localStorage.setItem('invox_user', JSON.stringify(cleanUser))
   }
 
+  const getAccessToken = async (): Promise<string> => {
+    if (asgardeo && typeof asgardeo.getAccessToken === 'function') {
+      try {
+        const t = await asgardeo.getAccessToken()
+        if (t) {
+          setAsgardeoToken(t)
+          localStorage.setItem('invox_token', t)
+          return t
+        }
+      } catch (_) {}
+    }
+    return asgardeoToken || localStorage.getItem('invox_token') || ''
+  }
+
+  const getDecodedIdToken = async (): Promise<any> => {
+    if (asgardeo && typeof asgardeo.getDecodedIdToken === 'function') {
+      try {
+        return await asgardeo.getDecodedIdToken()
+      } catch (_) {}
+    }
+    return null
+  }
+
   return (
     <AppContext.Provider value={{
       isDark,
@@ -240,10 +265,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
       currentTenant,
       setCurrentTenant,
       tenants,
+      setTenants,
       refreshTenants,
       asgardeoToken,
       setAsgardeoToken,
       asgardeo,
+      getAccessToken,
+      getDecodedIdToken,
     }}>
       {children}
     </AppContext.Provider>

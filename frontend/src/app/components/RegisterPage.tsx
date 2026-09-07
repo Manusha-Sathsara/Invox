@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
 import { useNavigate } from 'react-router'
-import { Zap, Mail, User, Sun, Moon, ArrowRight, Building2, Globe, CheckCircle2, AlertCircle, Loader2, Send } from 'lucide-react'
+import { Zap, Mail, User, Sun, Moon, ArrowRight, Building2, Globe, CheckCircle2, AlertCircle, Loader2, Send, Lock, Eye, EyeOff } from 'lucide-react'
 import { useApp } from '../context/AppContext'
 import { tenantApi } from '../services/tenantApi'
 
@@ -14,6 +14,8 @@ export function RegisterPage() {
   const [company, setCompany] = useState('')
   const [subdomain, setSubdomain] = useState('')
   const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [subdomainStatus, setSubdomainStatus] = useState<'idle' | 'checking' | 'available' | 'taken'>('idle')
@@ -48,8 +50,12 @@ export function RegisterPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!firstName || !company || !email || !subdomain) {
+    if (!firstName || !company || !email || !subdomain || !password) {
       setError('Please fill in all required fields.')
+      return
+    }
+    if (password.length < 8) {
+      setError('Password must be at least 8 characters long.')
       return
     }
     if (subdomainStatus === 'taken') {
@@ -67,6 +73,7 @@ export function RegisterPage() {
         adminEmail: email,
         adminFirstName: firstName,
         adminLastName: lastName || 'Admin',
+        adminPassword: password,
       })
 
       setRegistrationSuccess(response)
@@ -154,7 +161,7 @@ export function RegisterPage() {
                 Activation Email Sent!
               </h2>
               <p className={`text-sm ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>
-                We've provisioned your B2B workspace <strong>{registrationSuccess.companyName}</strong> and sent an account setup invitation to <span className="font-semibold text-indigo-400">{registrationSuccess.adminEmail}</span>.
+                We've provisioned your B2B workspace <strong>{registrationSuccess.companyName}</strong> and created your administrator account for <span className="font-semibold text-indigo-400">{registrationSuccess.adminEmail}</span>.
               </p>
 
               <div className={`p-4 rounded-2xl border text-left text-xs space-y-2 ${isDark ? 'bg-white/[0.03] border-white/[0.06] text-slate-300' : 'bg-black/[0.02] border-black/[0.05] text-slate-700'}`}>
@@ -162,9 +169,9 @@ export function RegisterPage() {
                   <CheckCircle2 size={14} /> Next Steps to Activate:
                 </div>
                 <div className="pl-4 space-y-1 text-slate-400">
-                  <p>1. Check your email inbox from Asgardeo / INVOX.</p>
-                  <p>2. Click the verification link to create your password.</p>
-                  <p>3. Sign in to enter your new workspace.</p>
+                  <p>1. Your administrator account and password are now active.</p>
+                  <p>2. A confirmation email has been sent to your inbox.</p>
+                  <p>3. Click Proceed to Sign In to log into your workspace.</p>
                 </div>
               </div>
 
@@ -275,7 +282,37 @@ export function RegisterPage() {
                     <input type="email" placeholder="alex@acmeglobal.com" value={email} onChange={e => setEmail(e.target.value)} className={`${inputClass} pl-9`} required />
                   </div>
                   <p className={`text-[11px] mt-1 ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
-                    An activation link to set your password will be sent to this email.
+                    Your administrator email for workspace notifications.
+                  </p>
+                </div>
+
+                <div>
+                  <label className={`text-xs mb-1 block ${isDark ? 'text-slate-400' : 'text-slate-600'}`} style={{ fontWeight: 600 }}>
+                    Admin Password <span className="text-red-400">*</span>
+                  </label>
+                  <div className="relative">
+                    <Lock size={14} className={`absolute left-3 top-1/2 -translate-y-1/2 ${isDark ? 'text-slate-500' : 'text-slate-400'}`} />
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      placeholder="Min 8 characters"
+                      value={password}
+                      onChange={e => setPassword(e.target.value)}
+                      className={`${inputClass} pl-9 pr-10`}
+                      required
+                      minLength={8}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className={`absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-lg transition-colors ${
+                        isDark ? 'text-slate-500 hover:text-slate-300' : 'text-slate-400 hover:text-slate-600'
+                      }`}
+                    >
+                      {showPassword ? <EyeOff size={14} /> : <Eye size={14} />}
+                    </button>
+                  </div>
+                  <p className={`text-[11px] mt-1 ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
+                    Must be at least 8 characters. Used to sign in to your workspace.
                   </p>
                 </div>
 

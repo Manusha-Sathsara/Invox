@@ -17,6 +17,7 @@ export interface Tenant {
   initials: string
   color: string
   slug: string
+  adminEmail?: string
 }
 
 export interface AppUser {
@@ -27,26 +28,46 @@ export interface AppUser {
   initials: string
 }
 
-// ─── Static data ─────────────────────────────────────────────────────────────
+export interface Customer {
+  id: string
+  name: string
+  email: string
+  phone?: string
+  country?: string
+  addressLine1?: string
+  addressLine2?: string
+  city?: string
+  state?: string
+  postalCode?: string
+  currency?: string
+  taxId?: string
+  contactPerson?: string
+  notes?: string
+  tenantId?: string
+  active?: boolean
+  totalInvoiced?: number
+  outstanding?: number
+  createdAt?: string
+  updatedAt?: string
+}
 
-export const CUSTOMERS = [
-  { id: '1', name: 'Stripe Inc',    email: 'billing@stripe.com',  phone: '+1 415 123 4567', totalInvoiced: 45200, outstanding: 0,    country: 'USA'    },
-  { id: '2', name: 'Vercel Corp',   email: 'finance@vercel.com',  phone: '+1 650 234 5678', totalInvoiced: 28750, outstanding: 5500, country: 'USA'    },
-  { id: '3', name: 'Linear Labs',   email: 'accounts@linear.app', phone: '+1 628 345 6789', totalInvoiced: 18300, outstanding: 3200, country: 'Canada' },
-  { id: '4', name: 'Notion HQ',     email: 'billing@notion.so',   phone: '+1 415 456 7890', totalInvoiced: 32100, outstanding: 8900, country: 'USA'    },
-  { id: '5', name: 'Figma Corp',    email: 'ap@figma.com',        phone: '+1 415 567 8901', totalInvoiced: 52400, outstanding: 0,    country: 'USA'    },
-  { id: '6', name: 'Loom Tech',     email: 'finance@loom.com',    phone: '+44 20 1234 5678',totalInvoiced: 14800, outstanding: 0,    country: 'UK'     },
-  { id: '7', name: 'Webflow Inc',   email: 'billing@webflow.com', phone: '+1 888 987 6543', totalInvoiced: 9600,  outstanding: 0,    country: 'USA'    },
-]
-
-export const PRODUCTS = [
-  { id: '1', name: 'Web Design Services',   description: 'Full-stack UI/UX and web design',    price: 1500, unit: 'project', taxRate: 10 },
-  { id: '2', name: 'Monthly Retainer',      description: 'Ongoing monthly support',             price: 3000, unit: 'month',   taxRate: 10 },
-  { id: '3', name: 'SEO Optimization',      description: 'Full SEO audit and optimization',     price: 800,  unit: 'month',   taxRate: 10 },
-  { id: '4', name: 'Development Hours',     description: 'Custom development work',             price: 150,  unit: 'hour',    taxRate: 10 },
-  { id: '5', name: 'Consulting Session',    description: 'Strategy and consulting calls',       price: 350,  unit: 'hour',    taxRate: 0  },
-  { id: '6', name: 'Brand Identity Package',description: 'Logo, colors, typography system',     price: 2200, unit: 'project', taxRate: 10 },
-]
+export interface Product {
+  id: string
+  name: string
+  description?: string
+  sku?: string
+  unitPrice: number
+  currency?: string
+  taxRate?: number
+  unitOfMeasure?: string
+  tenantId?: string
+  active?: boolean
+  createdAt?: string
+  updatedAt?: string
+  // Legacy fallback fields for backwards compatibility
+  price?: number
+  unit?: string
+}
 
 export type InvoiceStatus = 'Draft' | 'Sent' | 'Paid' | 'Overdue'
 
@@ -63,62 +84,20 @@ export interface Invoice {
   number: string
   customerId: string
   customerName: string
+  customerEmail?: string
+  creatorEmail?: string
   status: InvoiceStatus
   issueDate: string
   dueDate: string
+  notes?: string
+  currency?: string
+  subtotal?: number
+  taxTotal?: number
+  grandTotal?: number
   items: LineItem[]
-  notes: string
+  createdAt?: string
+  updatedAt?: string
 }
-
-export const INVOICES: Invoice[] = [
-  {
-    id: '1', number: 'INV-2024-001', customerId: '5', customerName: 'Figma Corp',
-    status: 'Paid', issueDate: '2024-01-05', dueDate: '2024-02-05',
-    items: [
-      { id: '1', description: 'Web Design Services',   quantity: 4, unitPrice: 1500, taxRate: 10 },
-      { id: '2', description: 'Brand Identity Package', quantity: 1, unitPrice: 2200, taxRate: 10 },
-    ], notes: 'Thank you for your business!',
-  },
-  {
-    id: '2', number: 'INV-2024-002', customerId: '2', customerName: 'Vercel Corp',
-    status: 'Sent', issueDate: '2024-01-15', dueDate: '2024-02-15',
-    items: [
-      { id: '1', description: 'Monthly Retainer',  quantity: 1,  unitPrice: 3000, taxRate: 10 },
-      { id: '2', description: 'Development Hours', quantity: 16, unitPrice: 150,  taxRate: 10 },
-    ], notes: '',
-  },
-  {
-    id: '3', number: 'INV-2023-098', customerId: '3', customerName: 'Linear Labs',
-    status: 'Overdue', issueDate: '2023-12-01', dueDate: '2024-01-01',
-    items: [
-      { id: '1', description: 'SEO Optimization', quantity: 4, unitPrice: 800, taxRate: 10 },
-    ], notes: 'Payment is overdue.',
-  },
-  {
-    id: '4', number: 'INV-2024-003', customerId: '4', customerName: 'Notion HQ',
-    status: 'Draft', issueDate: '2024-01-20', dueDate: '2024-02-20',
-    items: [
-      { id: '1', description: 'Consulting Session', quantity: 8,  unitPrice: 350, taxRate: 0  },
-      { id: '2', description: 'Development Hours',  quantity: 20, unitPrice: 150, taxRate: 10 },
-    ], notes: 'Draft for review before sending.',
-  },
-  {
-    id: '5', number: 'INV-2024-004', customerId: '1', customerName: 'Stripe Inc',
-    status: 'Paid', issueDate: '2024-01-10', dueDate: '2024-02-10',
-    items: [
-      { id: '1', description: 'Monthly Retainer',      quantity: 2, unitPrice: 3000, taxRate: 10 },
-      { id: '2', description: 'Brand Identity Package', quantity: 1, unitPrice: 2200, taxRate: 10 },
-    ], notes: '',
-  },
-  {
-    id: '6', number: 'INV-2024-005', customerId: '6', customerName: 'Loom Tech',
-    status: 'Sent', issueDate: '2024-01-22', dueDate: '2024-02-22',
-    items: [
-      { id: '1', description: 'Web Design Services', quantity: 1, unitPrice: 1500, taxRate: 10 },
-      { id: '2', description: 'SEO Optimization',    quantity: 2, unitPrice: 800,  taxRate: 10 },
-    ], notes: '',
-  },
-]
 
 // ─── App entry ───────────────────────────────────────────────────────────────
 

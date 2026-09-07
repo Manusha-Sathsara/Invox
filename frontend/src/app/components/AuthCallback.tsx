@@ -48,7 +48,7 @@ export function AuthCallback() {
             bodyParams['code_verifier'] = verifier
           }
 
-          const tokenRes = await fetch('https://api.asgardeo.io/t/pixelaura/oauth2/token', {
+          const tokenRes = await fetch(`${asgardeoConfig.baseUrl.replace(/\/+$/, '')}/oauth2/token`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/x-www-form-urlencoded',
