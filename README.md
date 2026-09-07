@@ -43,7 +43,7 @@ Invox is an cloud-native **Multi-Tenant B2B Invoicing SaaS** platform designed w
   - `invoice-service`: Invoicing workflows, HTML-to-PDF rendering (OpenHtmlToPdf), and email notifications.
   - `product-service`: Products and billable services catalog.
   - `customer-service`: Client and business partner management.
-- **Production-Grade Containerization**: Lightweight multi-stage Alpine Docker images running as unprivileged non-root users (`appuser:appgroup`), orchestrated via Docker Compose.
+- **Containerization**: Lightweight multi-stage Alpine Docker images running as unprivileged non-root users (`appuser:appgroup`), orchestrated via Docker Compose.
 
 ---
 
