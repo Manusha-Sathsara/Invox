@@ -16,7 +16,7 @@ public class EmailService {
 
     private final JavaMailSender mailSender;
 
-    @Value("${spring.mail.username:studiopixelaura.io@gmail.com}")
+    @Value("${spring.mail.username:}")
     private String fromEmail;
 
     @Value("${app.frontend-url:http://localhost:5173}")
@@ -49,11 +49,11 @@ public class EmailService {
                         <p style='margin: 6px 0; font-size: 13px; color: #64748b;'><strong>Assigned Role:</strong> <span style='background-color: #e0e7ff; color: #4338ca; padding: 2px 8px; border-radius: 6px; font-weight: 600; font-size: 11px;'>ADMINISTRATOR</span></p>
                     </div>
                     <p style='color: #475569; font-size: 14px; line-height: 1.6;'>
-                        To activate your account and establish your password, click the button below to access the sign-in portal:
+                        Your workspace and administrator credentials are ready. Click the button below to sign in:
                     </p>
                     <div style='text-align: center; margin: 28px 0;'>
                         <a href='%s' style='background: linear-gradient(135deg, #6366f1 0%%, #8b5cf6 100%%); color: #ffffff; padding: 14px 36px; border-radius: 12px; text-decoration: none; font-weight: bold; font-size: 15px; display: inline-block; box-shadow: 0 4px 14px rgba(99, 102, 241, 0.35);'>
-                            Set Password & Sign In →
+                            Sign In to Workspace →
                         </a>
                     </div>
                     <hr style='border: none; border-top: 1px solid #f1f5f9; margin: 24px 0;' />

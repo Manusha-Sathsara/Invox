@@ -39,10 +39,6 @@ public class TenantService {
             throw new IllegalArgumentException("Subdomain '" + cleanSubdomain + "' is already in use.");
         }
 
-        if (tenantRepository.existsByAdminEmailIgnoreCase(request.getAdminEmail())) {
-            throw new IllegalArgumentException("Admin email '" + request.getAdminEmail() + "' is already registered.");
-        }
-
         log.info("Starting B2B tenant registration for company: '{}' ({})", request.getCompanyName(), cleanSubdomain);
 
         // 1. Provision Sub-Organization in Asgardeo
@@ -57,11 +53,27 @@ public class TenantService {
         // 2. Share SPA application with this new sub-organization
         asgardeoClient.shareAppWithSubOrg(asgardeoOrgId);
 
-        // 3. Dispatch Initial Administrator Invitation & Setup in the Sub-Organization
-        asgardeoClient.inviteEmployeeToSubOrg(asgardeoOrgId, request.getAdminEmail(), "Administrator");
-        String asgardeoUserId = "invited_admin";
+        // 3. Obtain sub-org scoped M2M token (via organization_switch grant)
+        String subToken = asgardeoClient.getSubOrgToken(asgardeoOrgId);
 
-        // 4. Save Tenant entity in PostgreSQL
+        // 4. Provision Administrator in Asgardeo Sub-Organization via SCIM 2.0
+        String adminPassword = (request.getAdminPassword() != null && !request.getAdminPassword().isBlank())
+                ? request.getAdminPassword()
+                : "InvoxAdmin@2026";
+
+        String asgardeoUserId = asgardeoClient.createAdminUserInSubOrg(
+                asgardeoOrgId,
+                request.getAdminEmail(),
+                request.getAdminFirstName(),
+                request.getAdminLastName(),
+                adminPassword,
+                subToken
+        );
+
+        // 5. Assign Administrator role inside Asgardeo Sub-Organization
+        asgardeoClient.assignAdminRoleInSubOrg(asgardeoOrgId, asgardeoUserId, subToken);
+
+        // 6. Save Tenant entity in PostgreSQL
         Tenant tenant = Tenant.builder()
                 .companyName(request.getCompanyName())
                 .subdomain(cleanSubdomain)
@@ -74,7 +86,7 @@ public class TenantService {
 
         tenant = tenantRepository.save(tenant);
 
-        // 5. Save Admin user record
+        // 7. Save Admin user record
         TenantUser adminUser = TenantUser.builder()
                 .tenant(tenant)
                 .email(request.getAdminEmail())
@@ -87,7 +99,7 @@ public class TenantService {
 
         tenantUserRepository.save(adminUser);
 
-        // 6. Send live Workspace Activation Email directly to Admin's Inbox
+        // 8. Send live Workspace Activation Email directly to Admin's Inbox
         emailService.sendWorkspaceActivationEmail(
                 request.getAdminEmail(),
                 request.getAdminFirstName(),
@@ -336,14 +348,55 @@ public class TenantService {
         }
         String cleanEmail = email.trim().toLowerCase();
 
-        var userOpt = tenantUserRepository.findByEmailIgnoreCase(cleanEmail);
-        if (userOpt.isPresent()) {
-            return toUserDto(userOpt.get());
+        // 1. If tenantSlug is provided, attempt to resolve specific tenant first
+        Tenant targetTenant = null;
+        if (tenantSlug != null && !tenantSlug.isBlank()) {
+            String cleanSlug = tenantSlug.trim();
+            targetTenant = tenantRepository.findBySubdomainIgnoreCase(cleanSlug)
+                    .or(() -> tenantRepository.findByAsgardeoOrgId(cleanSlug))
+                    .orElse(null);
+
+            if (targetTenant != null) {
+                var userInTenant = tenantUserRepository.findByTenantAndEmailIgnoreCase(targetTenant, cleanEmail);
+                if (userInTenant.isPresent()) {
+                    return toUserDto(userInTenant.get());
+                }
+            }
         }
 
-        var tenantOpt = tenantRepository.findByAdminEmailIgnoreCase(cleanEmail);
-        if (tenantOpt.isPresent()) {
-            Tenant t = tenantOpt.get();
+        // 2. Query all TenantUser records matching the email
+        List<TenantUser> users = tenantUserRepository.findByEmailIgnoreCase(cleanEmail);
+        if (!users.isEmpty()) {
+            if (targetTenant != null) {
+                for (TenantUser u : users) {
+                    if (u.getTenant() != null && u.getTenant().getId().equals(targetTenant.getId())) {
+                        return toUserDto(u);
+                    }
+                }
+            }
+            // Prefer ADMINISTRATOR role, or first active user
+            TenantUser selected = users.stream()
+                    .filter(u -> u.getRole() == UserRole.ADMINISTRATOR)
+                    .findFirst()
+                    .orElseGet(() -> users.stream().filter(TenantUser::isActive).findFirst().orElse(users.get(0)));
+            return toUserDto(selected);
+        }
+
+        // 3. Query all Tenant records where user is the registered admin
+        List<Tenant> adminTenants = tenantRepository.findByAdminEmailIgnoreCase(cleanEmail);
+        if (!adminTenants.isEmpty()) {
+            Tenant t = null;
+            if (targetTenant != null) {
+                for (Tenant at : adminTenants) {
+                    if (at.getId().equals(targetTenant.getId())) {
+                        t = at;
+                        break;
+                    }
+                }
+            }
+            if (t == null) {
+                t = adminTenants.get(0);
+            }
             return TenantUserDto.builder()
                     .id(t.getId())
                     .email(cleanEmail)
@@ -355,6 +408,7 @@ public class TenantService {
                     .build();
         }
 
+        // 4. Fallback: Synthesize an Admin profile
         String namePart = cleanEmail.split("@")[0].replace(".", " ").replace("_", " ");
         String[] parts = namePart.split(" ");
         String first = parts.length > 0 ? parts[0] : "Admin";
@@ -426,14 +480,14 @@ public class TenantService {
         // Fallback 1: Try resolving by authenticated user's email
         String userEmail = TenantContext.getUserEmail();
         if (userEmail != null && !userEmail.isBlank()) {
-            var tenantUser = tenantUserRepository.findByEmailIgnoreCase(userEmail.trim());
-            if (tenantUser.isPresent()) {
-                return tenantUser.get().getTenant();
+            List<TenantUser> tenantUsers = tenantUserRepository.findByEmailIgnoreCase(userEmail.trim());
+            if (!tenantUsers.isEmpty()) {
+                return tenantUsers.get(0).getTenant();
             }
 
-            var tenantByAdmin = tenantRepository.findByAdminEmailIgnoreCase(userEmail.trim());
-            if (tenantByAdmin.isPresent()) {
-                return tenantByAdmin.get();
+            List<Tenant> adminTenants = tenantRepository.findByAdminEmailIgnoreCase(userEmail.trim());
+            if (!adminTenants.isEmpty()) {
+                return adminTenants.get(0);
             }
         }
 

@@ -22,6 +22,8 @@ public class AsgardeoScimUserRequest {
     private UserName name;
     private List<UserEmail> emails;
     private String password;
+    @Builder.Default
+    private Boolean active = true;
 
     @Data
     @Builder
