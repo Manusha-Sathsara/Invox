@@ -1,0 +1,67 @@
+server:
+  port: 8081
+
+spring:
+  application:
+    name: tenant-service
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/invox_db}
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:1221}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+  mail:
+    host: ${SMTP_HOST:smtp.gmail.com}
+    port: ${SMTP_PORT:587}
+    username: ${SMTP_USERNAME:studiopixelaura.io@gmail.com}
+    password: ${SMTP_PASSWORD:qwwggtihhwfsijbq}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+            required: true
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          jwk-set-uri: https://api.asgardeo.io/t/${asgardeo.root-org:pixelaura}/oauth2/jwks
+
+asgardeo:
+  root-org: pixelaura
+  token-endpoint: https://api.asgardeo.io/t/pixelaura/oauth2/token
+  base-api-url: https://api.asgardeo.io/t/pixelaura/api/server/v1
+  client-id: ${ASGARDEO_CLIENT_ID:R9er12n1oHfHXc_N23PYD6CHe88a}
+  client-secret: ${ASGARDEO_CLIENT_SECRET:NU5gIvqd3cGGtjv_kxG6dfr6X3Uzefhp3zIdEO6qDp0a}
+  spa-client-id: ${ASGARDEO_SPA_CLIENT_ID:pyfb1DKeI8kklfLqIyEfXZc5Urka}
+  scopes: >-
+    internal_organization_create
+    internal_organization_view
+    internal_organization_update
+    internal_organization_delete
+    internal_org_organization_create
+    internal_org_organization_view
+    internal_shared_application_create
+    internal_shared_application_view
+    internal_user_mgt_create
+    internal_user_mgt_view
+    internal_org_user_mgt_create
+    internal_org_user_mgt_view
+    internal_guest_mgt_invite_add
+    internal_org_guest_mgt_invite_add
+    internal_org_role_mgt_create
+    internal_org_role_mgt_view
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
