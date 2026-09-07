@@ -14,7 +14,7 @@ public interface TenantUserRepository extends JpaRepository<TenantUser, UUID> {
     List<TenantUser> findByTenant(Tenant tenant);
     Optional<TenantUser> findByIdAndTenant(UUID id, Tenant tenant);
     Optional<TenantUser> findByTenantAndEmailIgnoreCase(Tenant tenant, String email);
-    Optional<TenantUser> findByEmailIgnoreCase(String email);
-    Optional<TenantUser> findByAsgardeoUserId(String asgardeoUserId);
+    List<TenantUser> findByEmailIgnoreCase(String email);
+    List<TenantUser> findByAsgardeoUserId(String asgardeoUserId);
     boolean existsByTenantAndEmailIgnoreCase(Tenant tenant, String email);
 }
